@@ -29,20 +29,16 @@ class KernelTest extends AbstractTestCase
     {
         $kernel = $this->createInstance();
         $installedComponents = $kernel->getInstalledComponents();
-        $vendorPath = $this->getVendorPath();
-        $expectedInstalledComponents = array();
-
-        foreach (glob($vendorPath.'/*/*') as $glob) {
-            if (!is_file($glob.'/composer.json')) {
-                continue;
-            }
-
-            $expectedInstalledComponents[basename(dirname($glob)).'/'.basename($glob)] = realpath($glob);
-        }
-
-        ksort($expectedInstalledComponents);
+        $expectedInstalledComponents = $this->getInstalledComponents();
 
         $this->assertEquals($expectedInstalledComponents, $installedComponents);
+    }
+
+    public function test_getInstalledComponentsNames_returnsAnArrayOfInstalledComponentsNames()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertEquals($this->getInstalledComponentsNames(), $kernel->getInstalledComponentsNames());
     }
 
 

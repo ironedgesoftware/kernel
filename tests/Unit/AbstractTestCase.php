@@ -53,4 +53,26 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 
         return $this->_isVendor;
     }
+
+    protected function getInstalledComponents()
+    {
+        $installedComponents = array();
+
+        foreach (glob($this->getVendorPath().'/*/*') as $glob) {
+            if (!is_file($glob.'/composer.json')) {
+                continue;
+            }
+
+            $installedComponents[basename(dirname($glob)).'/'.basename($glob)] = realpath($glob);
+        }
+
+        ksort($installedComponents);
+
+        return $installedComponents;
+    }
+
+    protected function getInstalledComponentsNames()
+    {
+        return array_keys($this->getInstalledComponents());
+    }
 }
