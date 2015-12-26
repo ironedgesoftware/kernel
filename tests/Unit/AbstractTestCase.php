@@ -17,5 +17,40 @@ namespace IronEdge\Component\Kernel\Test\Unit;
  */
 abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 {
+    /**
+     * Field _vendorPath.
+     *
+     * @var string
+     */
+    private $_vendorPath;
 
+    /**
+     * Field _isVendor.
+     *
+     * @var bool
+     */
+    private $_isVendor;
+
+
+    // Helper Methods
+
+    protected function getVendorPath()
+    {
+        if ($this->_vendorPath === null) {
+            $this->_vendorPath = $this->isVendor() ?
+                __DIR__.'/../../../../' :
+                __DIR__.'/../../vendor';
+        }
+
+        return $this->_vendorPath;
+    }
+
+    protected function isVendor()
+    {
+        if ($this->_isVendor === null) {
+            $this->_isVendor = !is_dir(__DIR__.'/../../vendor');
+        }
+
+        return $this->_isVendor;
+    }
 }

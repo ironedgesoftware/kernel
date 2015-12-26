@@ -18,13 +18,31 @@ use IronEdge\Component\Kernel\Kernel;
  */
 class KernelTest extends AbstractTestCase
 {
-    public function test_getInstalledComponents_shouldReturnCorrectData()
+    public function test_isVendor_shouldReturnTrueIfThisComponentIsAVendor()
     {
         $kernel = $this->createInstance();
 
-        $installedComponents = $kernel->getInstalledComponents();
+        $this->assertEquals($this->isVendor(), $kernel->isVendor());
+    }
 
-        $this->assertInternalType('array', $installedComponents);
+    public function test_getInstalledComponents_shouldReturnCorrectData()
+    {
+        $kernel = $this->createInstance();
+        $installedComponents = $kernel->getInstalledComponents();
+        $vendorPath = $this->getVendorPath();
+        $expectedInstalledComponents = array();
+
+        foreach (glob($vendorPath.'/*/*') as $glob) {
+            if (!is_file($glob.'/composer.json')) {
+                continue;
+            }
+
+            $expectedInstalledComponents[basename(dirname($glob)).'/'.basename($glob)] = realpath($glob);
+        }
+
+        ksort($expectedInstalledComponents);
+
+        $this->assertEquals($expectedInstalledComponents, $installedComponents);
     }
 
 

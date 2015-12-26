@@ -69,7 +69,7 @@ class Kernel implements KernelInterface
         if ($this->_vendorPath === null) {
             $dir = $this->isVendor() ?
                 __DIR__.'/../../../' :
-                __DIR__.'/../';
+                __DIR__.'/../vendor';
 
             if (!($dir = realpath($dir))) {
                 throw VendorsNotInstalledException::create();
@@ -89,7 +89,7 @@ class Kernel implements KernelInterface
     public function isVendor()
     {
         if ($this->_isVendor === null) {
-            $this->_isVendor = is_dir(__DIR__.'/../vendor');
+            $this->_isVendor = !is_dir(__DIR__.'/../vendor');
         }
 
         return $this->_isVendor;
@@ -120,7 +120,7 @@ class Kernel implements KernelInterface
             $vendorPath = $this->getVendorPath();
             $glob = glob($vendorPath.'/*/*');
 
-            $this->installedComponents = [];
+            $this->_installedComponents = [];
 
             foreach ($glob as $globElement) {
                 if (!is_file($globElement.'/composer.json')) {
@@ -129,6 +129,8 @@ class Kernel implements KernelInterface
 
                 $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
+
+            ksort($this->_installedComponents);
         }
 
         return $this->_installedComponents;
