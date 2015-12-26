@@ -25,6 +25,13 @@ class KernelTest extends AbstractTestCase
         $this->assertEquals($this->isVendor(), $kernel->isVendor());
     }
 
+    public function test_isRootPackage_shouldReturnTrueIfThisComponentIsTheRootPackage()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertEquals(!$this->isVendor(), $kernel->isRootPackage());
+    }
+
     public function test_getInstalledComponents_shouldReturnCorrectData()
     {
         $kernel = $this->createInstance();

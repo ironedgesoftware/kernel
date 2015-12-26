@@ -40,6 +40,13 @@ class Kernel implements KernelInterface
     private $_vendorPath;
 
     /**
+     * Configuration object.
+     *
+     * @var
+     */
+    private $_config;
+
+    /**
      * Kernel Options.
      *
      * @var array
@@ -96,6 +103,16 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Returns true if this component is the root package.
+     *
+     * @return bool
+     */
+    public function isRootPackage()
+    {
+        return !$this->isVendor();
+    }
+
+    /**
      * Returns an array of installed component names. Example: ["ironedge/kernel", "myvendor/mycomponent"],
      *
      * @return array
@@ -134,6 +151,22 @@ class Kernel implements KernelInterface
         }
 
         return $this->_installedComponents;
+    }
+
+    /**
+     * Method getConfig.
+     *
+     * @return null
+     */
+    public function getConfig()
+    {
+        if ($this->_config === null) {
+            $installedComponents = $this->getInstalledComponents();
+
+
+        }
+
+        return $this->_config;
     }
 
     /**
