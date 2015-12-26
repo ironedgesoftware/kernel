@@ -23,22 +23,39 @@ class Kernel implements KernelInterface
      *
      * @var array
      */
-    private $installedComponents;
+    private $_installedComponents;
 
     /**
      * Is this component a vendor?
      *
      * @var bool
      */
-    private $isVendor;
+    private $_isVendor;
 
     /**
      * Vendor dir path.
      *
      * @var string
      */
-    private $vendorPath;
+    private $_vendorPath;
 
+    /**
+     * Kernel Options.
+     *
+     * @var array
+     */
+    private $_options;
+
+
+    /**
+     * Constructor.
+     *
+     * @param array $options - Options.
+     */
+    public function __construct(array $options = array())
+    {
+        $this->_options = $options;
+    }
 
     /**
      * Returns the path to the "vendor" directory.
@@ -49,7 +66,7 @@ class Kernel implements KernelInterface
      */
     public function getVendorPath()
     {
-        if ($this->vendorPath === null) {
+        if ($this->_vendorPath === null) {
             $dir = $this->isVendor() ?
                 __DIR__.'/../../../' :
                 __DIR__.'/../';
@@ -58,10 +75,10 @@ class Kernel implements KernelInterface
                 throw VendorsNotInstalledException::create();
             }
 
-            $this->vendorPath = realpath($dir);
+            $this->_vendorPath = realpath($dir);
         }
 
-        return $this->vendorPath;
+        return $this->_vendorPath;
     }
 
     /**
@@ -71,11 +88,11 @@ class Kernel implements KernelInterface
      */
     public function isVendor()
     {
-        if ($this->isVendor === null) {
-            $this->isVendor = is_dir(__DIR__.'/../vendor');
+        if ($this->_isVendor === null) {
+            $this->_isVendor = is_dir(__DIR__.'/../vendor');
         }
 
-        return $this->isVendor;
+        return $this->_isVendor;
     }
 
     /**
@@ -99,7 +116,7 @@ class Kernel implements KernelInterface
      */
     public function getInstalledComponents()
     {
-        if ($this->installedComponents === null) {
+        if ($this->_installedComponents === null) {
             $vendorPath = $this->getVendorPath();
             $glob = glob($vendorPath.'/*/*');
 
@@ -110,10 +127,20 @@ class Kernel implements KernelInterface
                     continue;
                 }
 
-                $this->installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
+                $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
         }
 
-        return $this->installedComponents;
+        return $this->_installedComponents;
+    }
+
+    /**
+     * Returns the Kernel options.
+     *
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
     }
 }

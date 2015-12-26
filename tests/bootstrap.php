@@ -11,7 +11,7 @@
 
 $autoloaders = array(
     __DIR__.'/../../../autoload.php',
-    __DIR__.'/../autoload.php'
+    __DIR__.'/../vendor/autoload.php'
 );
 
 foreach ($autoloaders as $autoloader) {

@@ -9,13 +9,13 @@
  * file that was distributed with this source code.
  */
 
-namespace IronEdge\Test\Unit\Kernel;
+namespace IronEdge\Component\Kernel\Test\Unit;
 
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
  */
-class KernelTest
+abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 {
 
 }
