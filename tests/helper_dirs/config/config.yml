@@ -1,0 +1,12 @@
+# Custom Params
+
+custom_params:
+  custom_param_1: custom_value_1
+
+# Components
+
+fantasy_vendor/fantasy_component_1:
+  users:
+    admin:
+      username: override_admin
+      password: override_password

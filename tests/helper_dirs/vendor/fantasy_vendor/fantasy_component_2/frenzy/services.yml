@@ -1,0 +1,3 @@
+services:
+  test2:
+    class: MyClass

@@ -1,0 +1,8 @@
+import:
+  services:
+    file: services.yml
+
+users:
+  admin:
+    username: admin
+    password: test

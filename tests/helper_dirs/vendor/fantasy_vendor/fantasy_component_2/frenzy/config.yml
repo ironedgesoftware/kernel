@@ -1,0 +1,10 @@
+import:
+  services:
+    file: services.yml
+  routes:
+    file: routes.yml
+
+users:
+  guest:
+    username: guest
+    password: guesttest
