@@ -469,6 +469,36 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Returns a configuration parameter of a component.
+     *
+     * @param string $componentName - Component name.
+     * @param string $paramName     - Param name.
+     * @param mixed  $default       - Default value in case the param does not exist.
+     * @param array  $options       - Options.
+     *
+     * @return mixed
+     */
+    public function getComponentConfigParam($componentName, $paramName, $default = null, array $options = [])
+    {
+        return $this->getConfig()->get($componentName.'.'.$paramName, $default, $options);
+    }
+
+    /**
+     * Sets a configuration parameter of a component.
+     *
+     * @param string $componentName - Component name.
+     * @param string $paramName     - Param name.
+     * @param mixed  $value         - Value.
+     * @param array  $options       - Options.
+     *
+     * @return mixed
+     */
+    public function setComponentConfigParam($componentName, $paramName, $value, array $options = [])
+    {
+        return $this->getConfig()->set($componentName.'.'.$paramName, $value, $options);
+    }
+
+    /**
      * Loads the config instance.
      *
      * @return void
@@ -482,9 +512,13 @@ class Kernel implements KernelInterface
         foreach ($installedComponents as $componentName => $componentPath) {
             $file = $componentPath.'/frenzy/config.yml';
 
-            if (is_file($file)) {
-                $this->_config->load(['file' => $file, 'loadInKey' => $componentName, 'processImports' => true]);
+            if (!is_file($file)) {
+                $this->_config->set($componentName, []);
+
+                continue;
             }
+
+            $this->_config->load(['file' => $file, 'loadInKey' => $componentName, 'processImports' => true]);
         }
 
         // Finally, we load the root project's config files. We must load them in these specific order.

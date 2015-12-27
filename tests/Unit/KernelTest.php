@@ -28,6 +28,34 @@ class KernelTest extends AbstractTestCase
         $this->cleanUp();
     }
 
+    public function test_getComponentConfigParam_returnsAComponentConfigParam()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertEquals(
+            'override_admin',
+            $kernel->getComponentConfigParam('fantasy_vendor/fantasy_component_1', 'users.admin.username')
+        );
+    }
+
+    public function test_setComponentConfigParam_setsAComponentConfigParam()
+    {
+        $kernel = $this->createInstance();
+
+        $kernel->setComponentConfigParam('fantasy_vendor/fantasy_component_1', 'users.admin.username', 'new_admin');
+
+        $this->assertEquals(
+            'new_admin',
+            $kernel->getComponentConfigParam('fantasy_vendor/fantasy_component_1', 'users.admin.username')
+        );
+    }
+
+    public function test_getConfigParam_ifComponentDoesntHaveConfigSetArrayAsDefault()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertEquals([], $kernel->getConfigParam('fantasy_vendor/fantasy_component_3'));
+    }
 
     public function test_getConfigParam_returnsCorrectParameter()
     {
