@@ -13,6 +13,8 @@ namespace IronEdge\Component\Kernel;
 
 use IronEdge\Component\Config\Config;
 use IronEdge\Component\Config\ConfigInterface;
+use IronEdge\Component\Kernel\Exception\InvalidConfigException;
+use IronEdge\Component\Kernel\Config\ProcessorInterface;
 use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
@@ -469,6 +471,19 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Checks if a configuration parameter exists.
+     *
+     * @param string $name    - Param name.
+     * @param array  $options - Options.
+     *
+     * @return bool
+     */
+    public function hasConfigParam($name, array $options = [])
+    {
+        return $this->getConfig()->has($name, $options);
+    }
+
+    /**
      * Returns a configuration parameter of a component.
      *
      * @param string $componentName - Component name.
@@ -480,7 +495,7 @@ class Kernel implements KernelInterface
      */
     public function getComponentConfigParam($componentName, $paramName, $default = null, array $options = [])
     {
-        return $this->getConfig()->get($componentName.'.'.$paramName, $default, $options);
+        return $this->getConfig()->get('components.'.$componentName.'.'.$paramName, $default, $options);
     }
 
     /**
@@ -495,7 +510,21 @@ class Kernel implements KernelInterface
      */
     public function setComponentConfigParam($componentName, $paramName, $value, array $options = [])
     {
-        return $this->getConfig()->set($componentName.'.'.$paramName, $value, $options);
+        return $this->getConfig()->set('components.'.$componentName.'.'.$paramName, $value, $options);
+    }
+
+    /**
+     * Checks if a configuration parameter of a component exists.
+     *
+     * @param string $componentName - Component name.
+     * @param string $paramName     - Param name.
+     * @param array  $options       - Options.
+     *
+     * @return mixed
+     */
+    public function hasComponentConfigParam($componentName, $paramName, array $options = [])
+    {
+        return $this->getConfig()->has('components.'.$componentName.'.'.$paramName, $options);
     }
 
     /**
@@ -505,35 +534,11 @@ class Kernel implements KernelInterface
      */
     public function loadConfig()
     {
-        // First we load the component's config files
+        $this->loadComponentsConfigFiles();
 
-        $installedComponents = $this->getInstalledComponents();
+        $this->loadRootProjectConfigFiles();
 
-        foreach ($installedComponents as $componentName => $componentPath) {
-            $file = $componentPath.'/frenzy/config.yml';
-
-            if (!is_file($file)) {
-                $this->_config->set($componentName, []);
-
-                continue;
-            }
-
-            $this->_config->load(['file' => $file, 'loadInKey' => $componentName, 'processImports' => true]);
-        }
-
-        // Finally, we load the root project's config files. We must load them in these specific order.
-
-        $files = [
-            $this->getConfigCommonFilePath(),
-            $this->getConfigEnvironmentFilePath(),
-            $this->getConfigCustomFilePath()
-        ];
-
-        foreach ($files as $file) {
-            if (is_file($file)) {
-                $this->_config->load(['file' => $file, 'processImports' => true]);
-            }
-        }
+        $this->runConfigProcessors();
     }
 
     /**
@@ -578,6 +583,89 @@ class Kernel implements KernelInterface
         return array_key_exists($name, $this->_options) ?
             $this->_options[$name] :
             $default;
+    }
+
+    /**
+     * Runs the registered configuration processors.
+     *
+     * @throws InvalidConfigException
+     *
+     * @return void
+     */
+    protected function runConfigProcessors()
+    {
+        $componentsNames = $this->getInstalledComponentsNames();
+
+        foreach ($componentsNames as $componentName) {
+            if (!$this->hasComponentConfigParam($componentName, 'ironedge/kernel.config.processorClass')) {
+                continue;
+            }
+
+            $processorClass = $this->getComponentConfigParam($componentName, 'ironedge/kernel.config.processorClass');
+
+            if (!is_string($processorClass)) {
+                throw InvalidConfigException::create(
+                    'Configuration "ironedge/kernel.processorClass" must be a string.'
+                );
+            }
+
+            $processor = new $processorClass();
+
+            if (!($processor instanceof ProcessorInterface)) {
+                throw InvalidConfigException::create(
+                    'Configuration "ironedge/kernel.processorClass" must be a class of instance '.
+                    '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
+                );
+            }
+
+            $processor->process($this, $this->getConfig());
+        }
+    }
+
+    /**
+     * Loads configuration files from the root project.
+     *
+     * @return void
+     */
+    protected function loadRootProjectConfigFiles()
+    {
+        // Finally, we load the root project's config files. We must load them in these specific order.
+
+        $files = [
+            $this->getConfigCommonFilePath(),
+            $this->getConfigEnvironmentFilePath(),
+            $this->getConfigCustomFilePath()
+        ];
+
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $this->_config->load(['file' => $file, 'processImports' => true]);
+            }
+        }
+    }
+
+    /**
+     * Loads configuration files from the installed components.
+     *
+     * @return void
+     */
+    protected function loadComponentsConfigFiles()
+    {
+        // First we load the component's config files
+
+        $installedComponents = $this->getInstalledComponents();
+
+        foreach ($installedComponents as $componentName => $componentPath) {
+            $file = $componentPath.'/frenzy/config.yml';
+
+            if (!is_file($file)) {
+                $this->_config->set('components.'.$componentName, []);
+
+                continue;
+            }
+
+            $this->_config->load(['file' => $file, 'loadInKey' => 'components.'.$componentName, 'processImports' => true]);
+        }
     }
 
     /**

@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace IronEdge\Component\Kernel\Test\Unit;
+namespace IronEdge\Component\Kernel\Test\Integration;
 
 
 /*

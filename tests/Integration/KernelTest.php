@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace IronEdge\Component\Kernel\Test\Unit;
+namespace IronEdge\Component\Kernel\Test\Integration;
 
 use IronEdge\Component\Kernel\Kernel;
 
@@ -26,6 +26,29 @@ class KernelTest extends AbstractTestCase
     public function tearDown()
     {
         $this->cleanUp();
+    }
+
+
+    public function test_runProcessors_shouldRunProcessorsAfterLoadingTheConfiguration()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertEquals(
+            'processor_config_value',
+            $kernel->getConfigParam('processor_config_param')
+        );
+        $this->assertEquals(
+            'processor_config_value2',
+            $kernel->getConfigParam('processor_config_param2')
+        );
+        $this->assertEquals(
+            'custom_value_3_dev_override',
+            $kernel->getConfigParam('processor_config.custom_param_1')
+        );
+        $this->assertEquals(
+            'custom_value_3_dev_override',
+            $kernel->getConfigParam('processor_config2.custom_param_1')
+        );
     }
 
     public function test_getComponentConfigParam_returnsAComponentConfigParam()
@@ -50,11 +73,19 @@ class KernelTest extends AbstractTestCase
         );
     }
 
+    public function test_hasConfigParam_testsIfAParamExists()
+    {
+        $kernel = $this->createInstance();
+
+        $this->assertTrue($kernel->hasConfigParam('components.fantasy_vendor/fantasy_component_3'));
+        $this->assertFalse($kernel->hasConfigParam('components.fantasy_vendor222222/fantasy_component_3'));
+    }
+
     public function test_getConfigParam_ifComponentDoesntHaveConfigSetArrayAsDefault()
     {
         $kernel = $this->createInstance();
 
-        $this->assertEquals([], $kernel->getConfigParam('fantasy_vendor/fantasy_component_3'));
+        $this->assertEquals([], $kernel->getConfigParam('components.fantasy_vendor/fantasy_component_3'));
     }
 
     public function test_getConfigParam_returnsCorrectParameter()
@@ -63,7 +94,7 @@ class KernelTest extends AbstractTestCase
 
         $this->assertEquals('custom_value_1_dev_override', $kernel->getConfigParam('custom_params.custom_param_1'));
         $this->assertEquals('custom_value_2_dev', $kernel->getConfigParam('custom_params.custom_param_2'));
-        $this->assertEquals('override_admin', $kernel->getConfigParam('fantasy_vendor/fantasy_component_1.users.admin.username'));
+        $this->assertEquals('override_admin', $kernel->getConfigParam('components.fantasy_vendor/fantasy_component_1.users.admin.username'));
     }
 
     public function test_setConfigParam_setsCorrectParameter()

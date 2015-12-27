@@ -6,3 +6,7 @@ users:
   admin:
     username: admin
     password: test
+
+ironedge/kernel:
+  config:
+    processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor

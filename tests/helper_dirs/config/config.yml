@@ -5,8 +5,9 @@ custom_params:
 
 # Components
 
-fantasy_vendor/fantasy_component_1:
-  users:
-    admin:
-      username: override_admin
-      password: override_password
+components:
+  fantasy_vendor/fantasy_component_1:
+    users:
+      admin:
+        username: override_admin
+        password: override_password

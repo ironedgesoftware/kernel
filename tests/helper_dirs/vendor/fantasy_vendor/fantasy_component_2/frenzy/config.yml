@@ -8,3 +8,7 @@ users:
   guest:
     username: guest
     password: guesttest
+
+ironedge/kernel:
+  config:
+    processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2
