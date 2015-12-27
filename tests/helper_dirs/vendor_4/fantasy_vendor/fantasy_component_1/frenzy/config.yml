@@ -1,0 +1,16 @@
+import:
+  services:
+    file: services.yml
+
+users:
+  admin:
+    username: admin
+    password: test
+
+components:
+  fantasy_vendor/fantasy_component2:
+    registered_param: registered_value_2
+
+  ironedge/kernel:
+    config:
+      processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor

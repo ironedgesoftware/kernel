@@ -1,0 +1,5 @@
+components:
+  ironedge/kernel:
+    config:
+      processorClass:
+        invalidValue: ooops

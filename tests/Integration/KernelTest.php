@@ -35,6 +35,66 @@ class KernelTest extends AbstractTestCase
         $this->cleanUp();
     }
 
+    public function test_runProcessors_ifNoProcessorIsRegisteredThenSkipExecutionOfMethodRunProcessors()
+    {
+        $kernel = $this->createInstance(
+            [
+                'directories'       => [
+                    'vendorPath'        => $this->getTestVendorPath5()
+                ]
+            ]
+        );
+
+        $kernel->getConfig();
+    }
+
+    /**
+     * @expectedException \IronEdge\Component\Kernel\Exception\InvalidConfigException
+     */
+    public function test_runProcessors_invalidComponentsParameterShouldThrowException()
+    {
+        $kernel = $this->createInstance(
+            [
+                'directories'       => [
+                    'vendorPath'        => $this->getTestVendorPath4()
+                ]
+            ]
+        );
+
+        $kernel->getConfig();
+    }
+
+    /**
+     * @expectedException \IronEdge\Component\Kernel\Exception\InvalidConfigException
+     */
+    public function test_runProcessors_invalidProcessorValueTypeShouldThrowException()
+    {
+        $kernel = $this->createInstance(
+            [
+                'directories'       => [
+                    'vendorPath'        => $this->getTestVendorPath3()
+                ]
+            ]
+        );
+
+        $kernel->getConfig();
+    }
+
+    /**
+     * @expectedException \IronEdge\Component\Kernel\Exception\InvalidConfigException
+     */
+    public function test_runProcessors_invalidProcessorImplementationShouldThrowException()
+    {
+        $kernel = $this->createInstance(
+            [
+                'directories'       => [
+                    'vendorPath'        => $this->getTestVendorPath2()
+                ]
+            ]
+        );
+
+        $kernel->getConfig();
+    }
 
     public function test_runProcessors_shouldRunProcessorsAfterLoadingTheConfiguration()
     {

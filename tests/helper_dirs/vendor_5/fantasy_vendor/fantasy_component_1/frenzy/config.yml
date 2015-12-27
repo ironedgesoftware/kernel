@@ -1,0 +1,3 @@
+components:
+  fantasy_vendor/fantasy_component2:
+    registered_param: registered_value_2

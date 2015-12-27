@@ -86,6 +86,26 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         return realpath(__DIR__.'/../helper_dirs/vendor');
     }
 
+    protected function getTestVendorPath2()
+    {
+        return realpath(__DIR__.'/../helper_dirs/vendor_2');
+    }
+
+    protected function getTestVendorPath3()
+    {
+        return realpath(__DIR__.'/../helper_dirs/vendor_3');
+    }
+
+    protected function getTestVendorPath4()
+    {
+        return realpath(__DIR__.'/../helper_dirs/vendor_4');
+    }
+
+    protected function getTestVendorPath5()
+    {
+        return realpath(__DIR__.'/../helper_dirs/vendor_5');
+    }
+
     protected function getTestConfigPath()
     {
         return realpath(__DIR__.'/../helper_dirs/config');
