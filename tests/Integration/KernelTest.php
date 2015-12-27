@@ -12,6 +12,8 @@
 namespace IronEdge\Component\Kernel\Test\Integration;
 
 use IronEdge\Component\Kernel\Kernel;
+use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor;
+use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2;
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
@@ -21,6 +23,11 @@ class KernelTest extends AbstractTestCase
     public function setUp()
     {
         $this->cleanUp();
+
+        ConfigProcessor::$onComponentConfigRegistrationCalled = false;
+        ConfigProcessor::$onAfterProcessCalled = false;
+        ConfigProcessor2::$onComponentConfigRegistrationCalled = false;
+        ConfigProcessor2::$onAfterProcessCalled = false;
     }
 
     public function tearDown()
@@ -33,21 +40,39 @@ class KernelTest extends AbstractTestCase
     {
         $kernel = $this->createInstance();
 
+        $kernel->getConfig();
+
+        $this->assertTrue(ConfigProcessor::$onComponentConfigRegistrationCalled);
+        $this->assertTrue(ConfigProcessor::$onAfterProcessCalled);
+
+        $this->assertFalse(ConfigProcessor2::$onComponentConfigRegistrationCalled);
+        $this->assertTrue(ConfigProcessor2::$onAfterProcessCalled);
+
         $this->assertEquals(
-            'processor_config_value',
-            $kernel->getConfigParam('processor_config_param')
+            'registered_value_1',
+            $kernel->getComponentConfigParam(
+                'fantasy_vendor/fantasy_component_1',
+                'on_component_config_registration.source_component.registered_param'
+            )
         );
         $this->assertEquals(
-            'processor_config_value2',
-            $kernel->getConfigParam('processor_config_param2')
+            'fantasy_vendor/fantasy_component_2',
+            $kernel->getComponentConfigParam(
+                'fantasy_vendor/fantasy_component_1',
+                'on_after_process.source_component'
+            )
         );
-        $this->assertEquals(
-            'custom_value_3_dev_override',
-            $kernel->getConfigParam('processor_config.custom_param_1')
+        $this->assertFalse(
+            $kernel->hasComponentConfigParam(
+                'fantasy_vendor/fantasy_component_2',
+                'on_component_config_registration.source_component.registered_param'
+            )
         );
-        $this->assertEquals(
-            'custom_value_3_dev_override',
-            $kernel->getConfigParam('processor_config2.custom_param_1')
+        $this->assertFalse(
+            $kernel->hasComponentConfigParam(
+                'fantasy_vendor/fantasy_component_2',
+                'on_after_process.source_component'
+            )
         );
     }
 

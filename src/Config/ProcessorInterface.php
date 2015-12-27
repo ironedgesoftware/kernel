@@ -21,12 +21,31 @@ use IronEdge\Component\Kernel\Kernel;
 interface ProcessorInterface
 {
     /**
-     * This method process the configuration after being loaded and merged.
+     * This method is called when a component wants to register some configuration data to other component.
+     *
+     * @param Kernel          $kernel - Kernel.
+     * @param ConfigInterface $config - Config object.
+     * @param string          $sourceComponentName - Source component name.
+     * @param string          $targetComponentName - Target component name.
+     * @param array           $registeredConfig    - Configuration registered by the source component.
+     *
+     * @return void
+     */
+    public function onComponentConfigRegistration(
+        Kernel $kernel,
+        ConfigInterface $config,
+        $sourceComponentName,
+        $targetComponentName,
+        array $registeredConfig
+    );
+
+    /**
+     * This method is called after loading and merging all files.
      *
      * @param Kernel          $kernel - Kernel.
      * @param ConfigInterface $config - Config object.
      *
      * @return void
      */
-    public function process(Kernel $kernel, ConfigInterface $config);
+    public function onAfterProcess(Kernel $kernel, ConfigInterface $config);
 }

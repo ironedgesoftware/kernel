@@ -21,10 +21,21 @@ use IronEdge\Component\Kernel\Kernel;
 
 class ConfigProcessor2 implements ProcessorInterface
 {
-    public function process(Kernel $kernel, ConfigInterface $config)
-    {
-        $config->set('processor_config_param2', 'processor_config_value2');
-        $config->set('processor_config2.custom_param_1', $config->get('custom_params.custom_param_3'));
+    public static $onComponentConfigRegistrationCalled = false;
+    public static $onAfterProcessCalled = false;
+
+    public function onComponentConfigRegistration(
+        Kernel $kernel,
+        ConfigInterface $config,
+        $sourceComponentName,
+        $targetComponentName,
+        array $registeredConfig
+    ) {
+        self::$onComponentConfigRegistrationCalled = true;
     }
 
+    public function onAfterProcess(Kernel $kernel, ConfigInterface $config)
+    {
+        self::$onAfterProcessCalled = true;
+    }
 }

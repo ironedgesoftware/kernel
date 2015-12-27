@@ -9,6 +9,10 @@ users:
     username: guest
     password: guesttest
 
-ironedge/kernel:
-  config:
-    processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2
+components:
+  fantasy_vendor/fantasy_component_1:
+    registered_param: registered_value_1
+
+  ironedge/kernel:
+    config:
+      processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2

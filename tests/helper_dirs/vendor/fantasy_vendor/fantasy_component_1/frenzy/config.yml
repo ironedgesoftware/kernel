@@ -7,6 +7,10 @@ users:
     username: admin
     password: test
 
-ironedge/kernel:
-  config:
-    processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor
+components:
+  fantasy_vendor/fantasy_component2:
+    registered_param: registered_value_2
+
+  ironedge/kernel:
+    config:
+      processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor
