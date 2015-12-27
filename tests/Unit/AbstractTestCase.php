@@ -75,4 +75,48 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
     {
         return array_keys($this->getInstalledComponents());
     }
+
+    protected function getTestRootPath()
+    {
+        return realpath(__DIR__.'/../tmp/root');
+    }
+
+    protected function getTestVendorPath()
+    {
+        return realpath(__DIR__.'/../tmp/vendor');
+    }
+
+    protected function getTestConfigPath()
+    {
+        return realpath(__DIR__.'/../tmp/config');
+    }
+
+    protected function cleanUp()
+    {
+        $glob = glob($this->getTestRootPath().'/*');
+
+        foreach ($glob as $element) {
+            $this->removeElement($element);
+        }
+    }
+
+    protected function removeElement($element)
+    {
+        if (is_dir($element)) {
+            $dirIterator = new \DirectoryIterator($element);
+
+            /** @var \DirectoryIterator $el */
+            foreach ($dirIterator as $el) {
+                if ($el->isDot()) {
+                    continue;
+                }
+
+                $this->removeElement($el->getPathname());
+            }
+
+            @rmdir($element);
+        } else {
+            @unlink($element);
+        }
+    }
 }

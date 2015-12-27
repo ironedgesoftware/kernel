@@ -11,6 +11,11 @@
 
 namespace IronEdge\Component\Kernel;
 
+use IronEdge\Component\Config\Config;
+use IronEdge\Component\Config\ConfigInterface;
+use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
+use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
+use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
 
 /*
@@ -33,16 +38,16 @@ class Kernel implements KernelInterface
     private $_isVendor;
 
     /**
-     * Vendor dir path.
+     * Array of directories used by this Kernel instance.
      *
-     * @var string
+     * @var array
      */
-    private $_vendorPath;
+    private $_directories = [];
 
     /**
      * Configuration object.
      *
-     * @var
+     * @var ConfigInterface
      */
     private $_config;
 
@@ -51,7 +56,21 @@ class Kernel implements KernelInterface
      *
      * @var array
      */
-    private $_options;
+    private $_options = [];
+
+    /**
+     * Environment.
+     *
+     * @var string
+     */
+    private $_environment;
+
+    /**
+     * Environment options.
+     *
+     * @var array
+     */
+    private $_environmentOptions = [];
 
 
     /**
@@ -59,9 +78,236 @@ class Kernel implements KernelInterface
      *
      * @param array $options - Options.
      */
-    public function __construct(array $options = array())
+    public function __construct(array $options = [])
     {
-        $this->_options = $options;
+        $options = array_replace_recursive(
+            [
+                'environment'           => 'dev',
+                'environmentsOptions'   => [
+                    'defaults'              => [
+                        'cache'                 => false
+                    ],
+                    'prod'                  => [
+                        'cache'                 => true
+                    ],
+                    'staging'               => [
+                        'cache'                 => true
+                    ]
+                ],
+                'directories'           => [
+                    'rootPath'              => null,
+                    'vendorPath'            => null,
+                    'logsPath'              => null,
+                    'etcPath'               => null,
+                    'configPath'            => null,
+                    'binPath'               => null,
+                    'tmpPath'               => null,
+                    'cachePath'             => null,
+                    'varPath'               => null
+                ]
+            ],
+            $options
+        );
+
+        $this->setOptions($options);
+    }
+
+    /**
+     * Method getEnvironment.
+     *
+     * @return string
+     */
+    public function getEnvironment()
+    {
+        return $this->_environment;
+    }
+
+    /**
+     * Returns the current environment options.
+     *
+     * @return array
+     */
+    public function getEnvironmentOptions()
+    {
+        return $this->_environmentOptions;
+    }
+
+    /**
+     * Returns a specific environment option, or $default if option $name does not exist.
+     *
+     * @param string $name    - Option name.
+     * @param mixed  $default - Default value if option does not exist.
+     *
+     * @return mixed
+     */
+    public function getEnvironmentOption($name, $default = null)
+    {
+        return array_key_exists($name, $this->_environmentOptions) ?
+            $this->_environmentOptions[$name] :
+            $default;
+    }
+
+    /**
+     * Is the current environment "dev"?
+     *
+     * @return bool
+     */
+    public function isDev()
+    {
+        return $this->getEnvironment() === 'dev';
+    }
+
+    /**
+     * Is cache enabled?
+     *
+     * @return bool
+     */
+    public function isCacheEnabled()
+    {
+        return $this->getEnvironmentOption('cache');
+    }
+
+    /**
+     * Returns the path to the root directory. If this is a vendor, it will be the path to the root project.
+     * If this is the root project, then it will be the path to the root of this component.
+     *
+     * @return string
+     */
+    public function getRootPath()
+    {
+        if ($this->getDirectory('rootPath') === null) {
+            $this->_directories['rootPath'] = dirname($this->getVendorPath());
+        }
+
+        return $this->getDirectory('rootPath');
+    }
+
+    /**
+     * Returns the path to the bin directory.
+     *
+     * @return string
+     */
+    public function getBinPath()
+    {
+        if ($this->getDirectory('binPath') === null) {
+            $this->_directories['binPath'] = $this->getRootPath().'/bin';
+        }
+
+        return $this->getDirectory('binPath');
+    }
+
+    /**
+     * Returns the path to the var directory.
+     *
+     * @return string
+     */
+    public function getVarPath()
+    {
+        if ($this->getDirectory('varPath') === null) {
+            $this->_directories['varPath'] = $this->getRootPath().'/var';
+        }
+
+        return $this->getDirectory('varPath');
+    }
+
+    /**
+     * Returns the path to the etc directory.
+     *
+     * @return string
+     */
+    public function getEtcPath()
+    {
+        if ($this->getDirectory('etcPath') === null) {
+            $this->_directories['etcPath'] = $this->getRootPath().'/etc';
+        }
+
+        return $this->getDirectory('etcPath');
+    }
+
+    /**
+     * Returns the path to the config files directory.
+     *
+     * @return string
+     */
+    public function getConfigPath()
+    {
+        if ($this->getDirectory('configPath') === null) {
+            $this->_directories['configPath'] = $this->getEtcPath().'/config';
+        }
+
+        return $this->getDirectory('configPath');
+    }
+
+    /**
+     * Returns the path to the common.yml configuration file.
+     *
+     * @return string
+     */
+    public function getConfigCommonFilePath()
+    {
+        return $this->getConfigPath().'/config.yml';
+    }
+
+    /**
+     * Returns the path to the config_%environment%.yml configuration file.
+     *
+     * @return string
+     */
+    public function getConfigEnvironmentFilePath()
+    {
+        return $this->getConfigPath().'/config_'.$this->getEnvironment().'.yml';
+    }
+
+    /**
+     * Returns the path to the custom.yml configuration file.
+     *
+     * @return string
+     */
+    public function getConfigCustomFilePath()
+    {
+        return $this->getConfigPath().'/custom.yml';
+    }
+
+    /**
+     * Returns the path to the directory which holds the log files.
+     *
+     * @return string
+     */
+    public function getLogsPath()
+    {
+        if ($this->getDirectory('logsPath') === null) {
+            $this->_directories['logsPath'] = $this->getVarPath().'/logs';
+        }
+
+        return $this->getDirectory('logsPath');
+    }
+
+    /**
+     * Returns the path to the directory which holds the temporary files.
+     *
+     * @return string
+     */
+    public function getTmpPath()
+    {
+        if ($this->getDirectory('tmpPath') === null) {
+            $this->_directories['tmpPath'] = $this->getVarPath().'/tmp';
+        }
+
+        return $this->getDirectory('tmpPath');
+    }
+
+    /**
+     * Returns the path to the directory which holds the cache files.
+     *
+     * @return string
+     */
+    public function getCachePath()
+    {
+        if ($this->getDirectory('cachePath') === null) {
+            $this->_directories['cachePath'] = $this->getVarPath().'/cache';
+        }
+
+        return $this->getDirectory('cachePath');
     }
 
     /**
@@ -73,7 +319,7 @@ class Kernel implements KernelInterface
      */
     public function getVendorPath()
     {
-        if ($this->_vendorPath === null) {
+        if ($this->getDirectory('vendorPath') === null) {
             $dir = $this->isVendor() ?
                 __DIR__.'/../../../' :
                 __DIR__.'/../vendor';
@@ -82,10 +328,35 @@ class Kernel implements KernelInterface
                 throw VendorsNotInstalledException::create();
             }
 
-            $this->_vendorPath = realpath($dir);
+            $this->_directories['vendorPath'] = $dir;
         }
 
-        return $this->_vendorPath;
+        return $this->getDirectory('vendorPath');
+    }
+
+    /**
+     * Returns a list of the directories this Kernel use.
+     *
+     * @return array
+     */
+    public function getDirectories()
+    {
+        return $this->_directories;
+    }
+
+    /**
+     * Returns the path to a directory.
+     *
+     * @param string $name    - Directory name.
+     * @param string $default - Default directory path.
+     *
+     * @return string
+     */
+    public function getDirectory($name, $default = null)
+    {
+        return array_key_exists($name, $this->_directories) ?
+            $this->_directories[$name] :
+            $default;
     }
 
     /**
@@ -156,17 +427,98 @@ class Kernel implements KernelInterface
     /**
      * Method getConfig.
      *
-     * @return null
+     * @return ConfigInterface
      */
     public function getConfig()
     {
         if ($this->_config === null) {
-            $installedComponents = $this->getInstalledComponents();
+            $this->_config = new Config();
 
-
+            $this->loadConfig();
         }
 
         return $this->_config;
+    }
+
+    /**
+     * Returns a configuration parameter.
+     *
+     * @param string $name    - Param name.
+     * @param mixed  $default - Default value in case the param does not exist.
+     * @param array  $options - Options.
+     *
+     * @return mixed
+     */
+    public function getConfigParam($name, $default = null, array $options = [])
+    {
+        return $this->getConfig()->get($name, $default, $options);
+    }
+
+    /**
+     * Sets a configuration parameter.
+     *
+     * @param string $name    - Param name.
+     * @param mixed  $value   - Value.
+     * @param array  $options - Options.
+     *
+     * @return mixed
+     */
+    public function setConfigParam($name, $value, array $options = [])
+    {
+        return $this->getConfig()->set($name, $value, $options);
+    }
+
+    /**
+     * Loads the config instance.
+     *
+     * @return void
+     */
+    public function loadConfig()
+    {
+        // First we load the component's config files
+
+        $installedComponents = $this->getInstalledComponents();
+
+        foreach ($installedComponents as $componentName => $componentPath) {
+            $file = $componentPath.'/frenzy/config.yml';
+
+            if (is_file($file)) {
+                $this->_config->load(['file' => $file, 'loadInKey' => $componentName, 'processImports' => true]);
+            }
+        }
+
+        // Finally, we load the root project's config files. We must load them in these specific order.
+
+        $files = [
+            $this->getConfigCommonFilePath(),
+            $this->getConfigEnvironmentFilePath(),
+            $this->getConfigCustomFilePath()
+        ];
+
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $this->_config->load(['file' => $file, 'processImports' => true]);
+            }
+        }
+    }
+
+    /**
+     * Sets the options for this Kernel instance.
+     *
+     * @param array $options - options.
+     *
+     * @return $this
+     */
+    public function setOptions(array $options)
+    {
+        $this->_options = array_replace_recursive(
+            $this->_options,
+            $options
+        );
+
+        $this->initialize();
+
+        return $this;
     }
 
     /**
@@ -177,5 +529,100 @@ class Kernel implements KernelInterface
     public function getOptions()
     {
         return $this->_options;
+    }
+
+    /**
+     * Returns a specific option, or $default if option $name does not exist.
+     *
+     * @param string $name    - Option name.
+     * @param mixed  $default - Default value if option does not exist.
+     *
+     * @return mixed
+     */
+    public function getOption($name, $default = null)
+    {
+        return array_key_exists($name, $this->_options) ?
+            $this->_options[$name] :
+            $default;
+    }
+
+    /**
+     * Initializes the Kernel
+     *
+     * @return void
+     */
+    protected function initialize()
+    {
+        $this->initializeDirectories();
+        $this->initializeEnvironment();
+    }
+
+    /**
+     * Initializes the Environment
+     *
+     * @return void
+     */
+    protected function initializeEnvironment()
+    {
+        $this->_environment = strtolower($this->getOption('environment'));
+
+        $allEnvironmentsOptions = $this->getOption('environmentsOptions');
+        $this->_environmentOptions = isset($allEnvironmentsOptions[$this->_environment]) ?
+            array_replace_recursive(
+                $allEnvironmentsOptions['defaults'],
+                $allEnvironmentsOptions[$this->_environment]
+            ) :
+            $allEnvironmentsOptions['defaults'];
+    }
+
+    /**
+     * Verifies that all directories exist and that they have proper permissions.
+     *
+     * @throws CantCreateDirectoryException
+     * @throws DirectoryIsNotWritable
+     * @throws InvalidOptionTypeException
+     *
+     * @return void
+     */
+    protected function initializeDirectories()
+    {
+        $directories = $this->getOption('directories', []);
+
+        if (!is_array($directories)) {
+            throw InvalidOptionTypeException::create('directories', 'array');
+        }
+
+        $this->_directories = array_replace(
+            $this->_directories,
+            $directories
+        );
+
+        foreach ($this->getDirectories() as $name => $dir) {
+            if ($dir === null) {
+                $method = 'get'.ucfirst($name);
+
+                if (method_exists($this, $method)) {
+                    $dir = $this->$method();
+                    $this->_directories[$name] = $dir;
+                }
+            }
+
+            if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+                throw CantCreateDirectoryException::create($name, $dir);
+            }
+
+            switch ($name) {
+                case 'logsPath':
+                case 'cachePath':
+                case 'tmpPath':
+                    if (!is_writable($dir)) {
+                        throw DirectoryIsNotWritable::create($name, $dir);
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }
