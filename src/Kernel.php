@@ -19,6 +19,10 @@ use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
+use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
@@ -74,6 +78,20 @@ class Kernel implements KernelInterface
      */
     private $_environmentOptions = [];
 
+    /**
+     * Field _container.
+     *
+     * @var ContainerInterface
+     */
+    private $_container;
+
+    /**
+     * Was the configuration initialized?
+     *
+     * @var bool
+     */
+    private $_configurationWasInitialized = false;
+
 
     /**
      * Constructor.
@@ -82,35 +100,6 @@ class Kernel implements KernelInterface
      */
     public function __construct(array $options = [])
     {
-        $options = array_replace_recursive(
-            [
-                'environment'           => 'dev',
-                'environmentsOptions'   => [
-                    'defaults'              => [
-                        'cache'                 => false
-                    ],
-                    'prod'                  => [
-                        'cache'                 => true
-                    ],
-                    'staging'               => [
-                        'cache'                 => true
-                    ]
-                ],
-                'directories'           => [
-                    'rootPath'              => null,
-                    'vendorPath'            => null,
-                    'logsPath'              => null,
-                    'etcPath'               => null,
-                    'configPath'            => null,
-                    'binPath'               => null,
-                    'tmpPath'               => null,
-                    'cachePath'             => null,
-                    'varPath'               => null
-                ]
-            ],
-            $options
-        );
-
         $this->setOptions($options);
     }
 
@@ -434,9 +423,7 @@ class Kernel implements KernelInterface
     public function getConfig()
     {
         if ($this->_config === null) {
-            $this->_config = new Config();
-
-            $this->loadConfig();
+            $this->initializeConfig();
         }
 
         return $this->_config;
@@ -530,15 +517,21 @@ class Kernel implements KernelInterface
     /**
      * Loads the config instance.
      *
+     * @param bool $refresh - Load again even if it was already loaded?
+     *
      * @return void
      */
-    public function loadConfig()
+    public function initializeConfig($refresh = false)
     {
-        $this->loadComponentsConfigFiles();
+        if (!$this->_configurationWasInitialized || $refresh) {
+            $this->_config = new Config();
 
-        $this->loadRootProjectConfigFiles();
+            $this->loadComponentsConfigFiles();
 
-        $this->runConfigProcessors();
+            $this->loadRootProjectConfigFiles();
+
+            $this->runConfigProcessors();
+        }
     }
 
     /**
@@ -551,11 +544,35 @@ class Kernel implements KernelInterface
     public function setOptions(array $options)
     {
         $this->_options = array_replace_recursive(
-            $this->_options,
+            [
+                'environment'           => 'dev',
+                'environmentsOptions'   => [
+                    'defaults'              => [
+                        'cache'                 => false
+                    ],
+                    'prod'                  => [
+                        'cache'                 => true
+                    ],
+                    'staging'               => [
+                        'cache'                 => true
+                    ]
+                ],
+                'directories'           => [
+                    'rootPath'              => null,
+                    'vendorPath'            => null,
+                    'logsPath'              => null,
+                    'etcPath'               => null,
+                    'configPath'            => null,
+                    'binPath'               => null,
+                    'tmpPath'               => null,
+                    'cachePath'             => null,
+                    'varPath'               => null
+                ]
+            ],
             $options
         );
 
-        $this->initialize();
+        $this->boot();
 
         return $this;
     }
@@ -583,6 +600,74 @@ class Kernel implements KernelInterface
         return array_key_exists($name, $this->_options) ?
             $this->_options[$name] :
             $default;
+    }
+
+    /**
+     * Returns the DIC instance.
+     *
+     * @return ContainerInterface
+     */
+    public function getContainer()
+    {
+        $this->initializeContainer();
+
+        return $this->_container;
+    }
+
+    /**
+     * Sets the DIC.
+     *
+     * @param ContainerInterface $container - Container.
+     *
+     * @return $this
+     */
+    public function setContainer(ContainerInterface $container)
+    {
+        $this->_container = $container;
+
+        return $this;
+    }
+
+    /**
+     * Returns a service with ID $id from the DIC.
+     *
+     * @param string  $serviceId       - Service ID.
+     * @param integer $invalidBehavior - Invalid Behaviour.
+     *
+     * @return object
+     */
+    public function getContainerService(
+        $serviceId,
+        $invalidBehavior = ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE
+    ) {
+        return $this->getContainer()->get($serviceId, $invalidBehavior);
+    }
+
+    /**
+     * Verifies if the DIC has a service with id $id.
+     *
+     * @param string $serviceId - Service ID.
+     *
+     * @return bool
+     */
+    public function hasContainerService($serviceId)
+    {
+        return $this->getContainer()->has($serviceId);
+    }
+
+    /**
+     * Sets a service on the DIC.
+     *
+     * @param string $serviceId - Service ID.
+     * @param object $service   - Service instance.
+     *
+     * @return $this
+     */
+    public function setContainerService($serviceId, $service)
+    {
+        $this->getContainer()->set($serviceId, $service);
+
+        return $this;
     }
 
     /**
@@ -731,14 +816,40 @@ class Kernel implements KernelInterface
     }
 
     /**
-     * Initializes the Kernel
+     * Boots the Kernel
      *
      * @return void
      */
-    protected function initialize()
+    protected function boot()
     {
         $this->initializeDirectories();
         $this->initializeEnvironment();
+    }
+
+    /**
+     * Initializes the DIC.
+     *
+     * @param bool $refresh - Reinitialize the DIC?
+     *
+     * @return void
+     */
+    protected function initializeContainer($refresh = false)
+    {
+        if ($this->_container === null || $refresh) {
+            $this->initializeConfig($refresh);
+
+            $this->_container = new ContainerBuilder();
+            $installedComponents = $this->getInstalledComponents();
+
+            foreach ($installedComponents as $componentName => $componentPath) {
+                $path = $componentPath.'/frenzy/services.xml';
+
+                if (is_file($path)) {
+                    $loader = new XmlFileLoader($this->_container, new FileLocator(dirname($path)));
+                    $loader->load('services.xml');
+                }
+            }
+        }
     }
 
     /**

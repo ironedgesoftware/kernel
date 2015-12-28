@@ -14,15 +14,36 @@ namespace IronEdge\Component\Kernel\Test\Integration;
 use IronEdge\Component\Kernel\Kernel;
 use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor;
 use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
  */
 class KernelTest extends AbstractTestCase
 {
+    /**
+     * Field containerKernelTest.
+     *
+     * @var Kernel
+     */
+    public static $containerKernelTest;
+
+
     public function setUp()
     {
         $this->cleanUp();
+
+        if (self::$containerKernelTest === null) {
+            $options = [
+                'directories'       => [
+                    'rootPath'          => $this->getTestRootPath(),
+                    'vendorPath'        => $this->getTestVendorPath(),
+                    'configPath'        => $this->getTestConfigPath()
+                ]
+            ];
+
+            self::$containerKernelTest = new Kernel($options);
+        }
 
         ConfigProcessor::$onComponentConfigRegistrationCalled = false;
         ConfigProcessor::$onAfterProcessCalled = false;
@@ -33,6 +54,50 @@ class KernelTest extends AbstractTestCase
     public function tearDown()
     {
         $this->cleanUp();
+    }
+
+    public function test_setContainer_setsANewContainer()
+    {
+        self::$containerKernelTest->setContainerService('my_fantasy_service.datetime', new \DateTime());
+
+        $this->assertTrue(self::$containerKernelTest->hasContainerService('my_fantasy_service.datetime'));
+
+        $newContainer = new ContainerBuilder();
+        $oldContainer = self::$containerKernelTest->getContainer();
+
+        self::$containerKernelTest->setContainer($newContainer);
+
+        $this->assertEquals($newContainer, self::$containerKernelTest->getContainer());
+
+        self::$containerKernelTest->setContainer($oldContainer);
+    }
+
+    public function test_setContainerService_setsTheConfiguredService()
+    {
+        self::$containerKernelTest->setContainerService('my_fantasy_service.datetime', new \DateTime());
+
+        $this->assertTrue(self::$containerKernelTest->hasContainerService('my_fantasy_service.datetime'));
+
+        $this->assertInstanceOf('\DateTime', self::$containerKernelTest->getContainerService('my_fantasy_service.datetime'));
+    }
+
+    public function test_hasContainerService_checksIfTheConfiguredServiceIsThere()
+    {
+        $this->assertTrue(self::$containerKernelTest->hasContainerService('fantasy_component_1.datetime'));
+        $this->assertTrue(self::$containerKernelTest->hasContainerService('fantasy_component_2.datetime'));
+        $this->assertFalse(self::$containerKernelTest->hasContainerService('fantasy_component_3.datetime'));
+    }
+
+    public function test_getContainerService_returnsTheConfiguredService()
+    {
+        $dateTimeService = self::$containerKernelTest->getContainerService('fantasy_component_1.datetime');
+        $dateTimeService2 = self::$containerKernelTest->getContainerService('fantasy_component_2.datetime');
+
+        $this->assertInstanceOf('\DateTime', $dateTimeService);
+        $this->assertEquals('2010-01-01 00:00:00', $dateTimeService->format('Y-m-d H:i:s'));
+
+        $this->assertInstanceOf('\DateTime', $dateTimeService2);
+        $this->assertEquals('2011-01-01 00:00:00', $dateTimeService2->format('Y-m-d H:i:s'));
     }
 
     public function test_runProcessors_ifNoProcessorIsRegisteredThenSkipExecutionOfMethodRunProcessors()
