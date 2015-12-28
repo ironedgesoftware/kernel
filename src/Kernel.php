@@ -849,6 +849,8 @@ class Kernel implements KernelInterface
                     $loader->load('services.xml');
                 }
             }
+
+            $this->_container->compile();
         }
     }
 
