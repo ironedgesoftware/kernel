@@ -12,8 +12,8 @@
 namespace IronEdge\Component\Kernel\Test\Integration;
 
 use IronEdge\Component\Kernel\Kernel;
-use IronEdge\Component\Kernel\Test\Helper\Listener;
-use IronEdge\Component\Kernel\Test\Helper\Listener2;
+use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor;
+use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\BadMethodCallException;
 
@@ -46,10 +46,10 @@ class KernelTest extends AbstractTestCase
             self::$containerKernelTest = new Kernel($options);
         }
 
-        Listener::$onComponentConfigRegistrationCalled = false;
-        Listener::$onAfterProcessCalled = false;
-        Listener2::$onComponentConfigRegistrationCalled = false;
-        Listener2::$onAfterProcessCalled = false;
+        ConfigProcessor::$onComponentConfigRegistrationCalled = false;
+        ConfigProcessor::$onAfterProcessCalled = false;
+        ConfigProcessor2::$onComponentConfigRegistrationCalled = false;
+        ConfigProcessor2::$onAfterProcessCalled = false;
     }
 
     public function tearDown()
@@ -176,11 +176,11 @@ class KernelTest extends AbstractTestCase
 
         $kernel->getConfig();
 
-        $this->assertTrue(Listener::$onComponentConfigRegistrationCalled);
-        $this->assertTrue(Listener::$onAfterProcessCalled);
+        $this->assertTrue(ConfigProcessor::$onComponentConfigRegistrationCalled);
+        $this->assertTrue(ConfigProcessor::$onAfterProcessCalled);
 
-        $this->assertFalse(Listener2::$onComponentConfigRegistrationCalled);
-        $this->assertTrue(Listener2::$onAfterProcessCalled);
+        $this->assertFalse(ConfigProcessor2::$onComponentConfigRegistrationCalled);
+        $this->assertTrue(ConfigProcessor2::$onAfterProcessCalled);
 
         $this->assertEquals(
             'registered_value_1',

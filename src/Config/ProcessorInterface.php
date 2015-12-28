@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace IronEdge\Component\Kernel\Event;
+namespace IronEdge\Component\Kernel\Config;
 
 
 use IronEdge\Component\Config\ConfigInterface;
@@ -18,7 +18,7 @@ use IronEdge\Component\Kernel\Kernel;
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
  */
-interface ListenerInterface
+interface ProcessorInterface
 {
     /**
      * This method is called when a component wants to register some configuration data to other component.

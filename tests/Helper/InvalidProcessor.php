@@ -19,6 +19,6 @@ use IronEdge\Component\Config\ConfigInterface;
 use IronEdge\Component\Kernel\Config\ProcessorInterface;
 use IronEdge\Component\Kernel\Kernel;
 
-class InvalidListener
+class InvalidProcessor
 {
 }
