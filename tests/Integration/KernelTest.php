@@ -47,9 +47,11 @@ class KernelTest extends AbstractTestCase
         }
 
         ConfigProcessor::$onComponentConfigRegistrationCalled = false;
-        ConfigProcessor::$onAfterProcessCalled = false;
+        ConfigProcessor::$onBeforeCache = false;
+        ConfigProcessor::$onAfterCache = false;
         ConfigProcessor2::$onComponentConfigRegistrationCalled = false;
-        ConfigProcessor2::$onAfterProcessCalled = false;
+        ConfigProcessor2::$onBeforeCache = false;
+        ConfigProcessor2::$onAfterCache = false;
     }
 
     public function tearDown()
@@ -177,10 +179,12 @@ class KernelTest extends AbstractTestCase
         $kernel->getConfig();
 
         $this->assertTrue(ConfigProcessor::$onComponentConfigRegistrationCalled);
-        $this->assertTrue(ConfigProcessor::$onAfterProcessCalled);
+        $this->assertTrue(ConfigProcessor::$onBeforeCache);
+        $this->assertTrue(ConfigProcessor::$onAfterCache);
 
         $this->assertFalse(ConfigProcessor2::$onComponentConfigRegistrationCalled);
-        $this->assertTrue(ConfigProcessor2::$onAfterProcessCalled);
+        $this->assertTrue(ConfigProcessor2::$onBeforeCache);
+        $this->assertTrue(ConfigProcessor2::$onAfterCache);
 
         $this->assertEquals(
             'registered_value_1',
@@ -193,7 +197,14 @@ class KernelTest extends AbstractTestCase
             'fantasy_vendor/fantasy_component_2',
             $kernel->getComponentConfigParam(
                 'fantasy_vendor/fantasy_component_1',
-                'on_after_process.source_component'
+                'on_before_cache.source_component'
+            )
+        );
+        $this->assertEquals(
+            'fantasy_vendor/fantasy_component_2',
+            $kernel->getComponentConfigParam(
+                'fantasy_vendor/fantasy_component_1',
+                'on_after_cache.source_component'
             )
         );
         $this->assertFalse(
@@ -205,7 +216,13 @@ class KernelTest extends AbstractTestCase
         $this->assertFalse(
             $kernel->hasComponentConfigParam(
                 'fantasy_vendor/fantasy_component_2',
-                'on_after_process.source_component'
+                'on_before_cache.source_component'
+            )
+        );
+        $this->assertFalse(
+            $kernel->hasComponentConfigParam(
+                'fantasy_vendor/fantasy_component_2',
+                'on_after_cache.source_component'
             )
         );
     }

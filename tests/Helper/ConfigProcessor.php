@@ -22,7 +22,8 @@ use IronEdge\Component\Kernel\Kernel;
 class ConfigProcessor implements ProcessorInterface
 {
     public static $onComponentConfigRegistrationCalled = false;
-    public static $onAfterProcessCalled = false;
+    public static $onBeforeCache = false;
+    public static $onAfterCache = false;
 
     private $_sourceComponent;
 
@@ -46,16 +47,27 @@ class ConfigProcessor implements ProcessorInterface
         );
     }
 
-    public function onAfterProcess(Kernel $kernel, ConfigInterface $config)
+    public function onBeforeCache(Kernel $kernel, ConfigInterface $config)
     {
-        self::$onAfterProcessCalled = true;
+        self::$onBeforeCache = true;
 
         if ($this->_targetComponent) {
             $config->set(
-                'components.'.$this->_targetComponent.'.on_after_process.source_component',
+                'components.'.$this->_targetComponent.'.on_before_cache.source_component',
                 $this->_sourceComponent
             );
         }
     }
 
+    public function onAfterCache(Kernel $kernel, ConfigInterface $config)
+    {
+        self::$onAfterCache = true;
+
+        if ($this->_targetComponent) {
+            $config->set(
+                'components.'.$this->_targetComponent.'.on_after_cache.source_component',
+                $this->_sourceComponent
+            );
+        }
+    }
 }

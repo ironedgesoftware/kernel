@@ -11,6 +11,7 @@
 
 namespace IronEdge\Component\Kernel;
 
+use IronEdge\Component\Cache\Factory;
 use IronEdge\Component\Config\Config;
 use IronEdge\Component\Config\ConfigInterface;
 use IronEdge\Component\Kernel\Config\ProcessorInterface;
@@ -29,6 +30,10 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  */
 class Kernel implements KernelInterface
 {
+    const KERNEL_CACHE_INSTANCE_ID          = 'ironedge.kernel';
+    const KERNEL_CACHE_CONFIG_ID            = 'configuration';
+
+
     /**
      * A list of installed components.
      *
@@ -58,6 +63,13 @@ class Kernel implements KernelInterface
     private $_config;
 
     /**
+     * Array of config processors.
+     *
+     * @var array
+     */
+    private $_configProcessors;
+
+    /**
      * Kernel Options.
      *
      * @var array
@@ -84,6 +96,13 @@ class Kernel implements KernelInterface
      * @var ContainerInterface
      */
     private $_container;
+
+    /**
+     * Field _cacheFactory.
+     *
+     * @var Factory
+     */
+    private $_cacheFactory;
 
     /**
      * Was the configuration initialized?
@@ -422,10 +441,6 @@ class Kernel implements KernelInterface
      */
     public function getConfig()
     {
-        if ($this->_config === null) {
-            $this->initializeConfig();
-        }
-
         return $this->_config;
     }
 
@@ -524,13 +539,30 @@ class Kernel implements KernelInterface
     public function initializeConfig($refresh = false)
     {
         if (!$this->_configurationWasInitialized || $refresh) {
-            $this->_config = new Config();
+            $cache = $this->getKernelCache();
 
-            $this->loadComponentsConfigFiles();
+            $this->_config = new Config(
+                [],
+                [
+                    'templateVariables'         => $this->getOption('configTemplateVariables', [])
+                ]
+            );
 
-            $this->loadRootProjectConfigFiles();
+            if (!($config = $cache->fetch(self::KERNEL_CACHE_CONFIG_ID))) {
+                $this->loadComponentsConfigFiles();
 
-            $this->runConfigProcessors();
+                $this->loadRootProjectConfigFiles();
+
+                $this->runOnComponentConfigRegistrationProcessorMethod();
+
+                $this->runOnBeforeCacheMethod();
+
+                $cache->save(self::KERNEL_CACHE_CONFIG_ID, $this->_config->getData());
+            } else {
+                $this->_config->setData($config);
+            }
+
+            $this->runOnAfterCacheMethod();
 
             $this->_configurationWasInitialized = true;
         }
@@ -547,29 +579,30 @@ class Kernel implements KernelInterface
     {
         $this->_options = array_replace_recursive(
             [
-                'environment'           => 'dev',
-                'environmentsOptions'   => [
-                    'defaults'              => [
-                        'cache'                 => false
+                'environment'               => 'dev',
+                'environmentsOptions'       => [
+                    'defaults'                  => [
+                        'cache'                     => false
                     ],
-                    'prod'                  => [
-                        'cache'                 => true
+                    'prod'                      => [
+                        'cache'                     => true
                     ],
-                    'staging'               => [
-                        'cache'                 => true
+                    'staging'                   => [
+                        'cache'                     => true
                     ]
                 ],
-                'directories'           => [
-                    'rootPath'              => null,
-                    'vendorPath'            => null,
-                    'logsPath'              => null,
-                    'etcPath'               => null,
-                    'configPath'            => null,
-                    'binPath'               => null,
-                    'tmpPath'               => null,
-                    'cachePath'             => null,
-                    'varPath'               => null
-                ]
+                'directories'               => [
+                    'rootPath'                  => null,
+                    'vendorPath'                => null,
+                    'logsPath'                  => null,
+                    'etcPath'                   => null,
+                    'configPath'                => null,
+                    'binPath'                   => null,
+                    'tmpPath'                   => null,
+                    'cachePath'                 => null,
+                    'varPath'                   => null
+                ],
+                'configTemplateVariables'   => []
             ],
             $options
         );
@@ -611,8 +644,6 @@ class Kernel implements KernelInterface
      */
     public function getContainer()
     {
-        $this->initializeContainer();
-
         return $this->_container;
     }
 
@@ -673,13 +704,79 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Returns the instance of the cache factory.
+     *
+     * @return Factory
+     */
+    public function getCacheFactory()
+    {
+        if ($this->_cacheFactory === null) {
+            $this->_cacheFactory = new Factory();
+        }
+
+        return $this->_cacheFactory;
+    }
+
+    /**
+     * Returns the kernel cache provider instance.
+     *
+     * @throws \IronEdge\Component\Cache\Exception\InvalidConfigException
+     * @throws \IronEdge\Component\Cache\Exception\InvalidTypeException
+     * @throws \IronEdge\Component\Cache\Exception\MissingExtensionException
+     *
+     * @return \Doctrine\Common\Cache\CacheProvider
+     */
+    public function getKernelCache()
+    {
+        return $this->getCacheFactory()->create(
+            self::KERNEL_CACHE_INSTANCE_ID,
+            $this->isCacheEnabled() ?
+                'filesystem' :
+                'void',
+            [
+                'directory'             => $this->getCachePath().'/ironedge/kernel'
+            ]
+        );
+    }
+
+    /**
+     * Runs the method "onBeforeCache" method of the configuration processors.
+     *
+     * @throws InvalidConfigException
+     *
+     * @return void
+     */
+    protected function runOnBeforeCacheMethod()
+    {
+        /** @var ProcessorInterface $processor */
+        foreach ($this->getConfigProcessors() as $processor) {
+            $processor->onBeforeCache($this, $this->getConfig());
+        }
+    }
+
+    /**
+     * Runs the method "onAfterCache" method of the configuration processors.
+     *
+     * @throws InvalidConfigException
+     *
+     * @return void
+     */
+    protected function runOnAfterCacheMethod()
+    {
+        /** @var ProcessorInterface $processor */
+        foreach ($this->getConfigProcessors() as $processor) {
+            $processor->onAfterCache($this, $this->getConfig());
+        }
+    }
+
+    /**
      * Runs the configuration processors.
      *
      * @throws InvalidConfigException
      *
      * @return void
      */
-    protected function runConfigProcessors()
+    protected function runOnComponentConfigRegistrationProcessorMethod()
     {
         $configProcessors = $this->getConfigProcessors();
 
@@ -719,13 +816,6 @@ class Kernel implements KernelInterface
                 );
             }
         }
-
-        // Now, the onAfterProcess method.
-
-        /** @var ProcessorInterface $processor */
-        foreach ($configProcessors as $processor) {
-            $processor->onAfterProcess($this, $this->getConfig());
-        }
     }
 
     /**
@@ -737,41 +827,43 @@ class Kernel implements KernelInterface
      */
     protected function getConfigProcessors()
     {
-        $processors = [];
-        $componentsNames = $this->getInstalledComponentsNames();
+        if ($this->_configProcessors === null) {
+            $this->_configProcessors = [];
+            $componentsNames = $this->getInstalledComponentsNames();
 
-        foreach ($componentsNames as $componentName) {
-            if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.config.processorClass')) {
-                continue;
-            }
+            foreach ($componentsNames as $componentName) {
+                if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.config.processorClass')) {
+                    continue;
+                }
 
-            $processorClass = $this->getComponentConfigParam(
-                $componentName,
-                'components.ironedge/kernel.config.processorClass'
-            );
-
-            if (!is_string($processorClass)) {
-                throw InvalidConfigException::create(
-                    'Error in configuration of component "'.$componentName.'": '.
-                    'Configuration "components.ironedge/kernel.config.processorClass" must be a string. Received: '.
-                    print_r($processorClass, true)
+                $processorClass = $this->getComponentConfigParam(
+                    $componentName,
+                    'components.ironedge/kernel.config.processorClass'
                 );
+
+                if (!is_string($processorClass)) {
+                    throw InvalidConfigException::create(
+                        'Error in configuration of component "'.$componentName.'": '.
+                        'Configuration "components.ironedge/kernel.config.processorClass" must be a string. Received: '.
+                        print_r($processorClass, true)
+                    );
+                }
+
+                $processor = new $processorClass();
+
+                if (!($processor instanceof ProcessorInterface)) {
+                    throw InvalidConfigException::create(
+                        'Error in configuration of component "'.$componentName.'": '.
+                        'Configuration "components.ironedge/kernel.config.processorClass" must be a class of instance '.
+                        '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
+                    );
+                }
+
+                $this->_configProcessors[$componentName] = $processor;
             }
-
-            $processor = new $processorClass();
-
-            if (!($processor instanceof ProcessorInterface)) {
-                throw InvalidConfigException::create(
-                    'Error in configuration of component "'.$componentName.'": '.
-                    'Configuration "components.ironedge/kernel.config.processorClass" must be a class of instance '.
-                    '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
-                );
-            }
-
-            $processors[$componentName] = $processor;
         }
 
-        return $processors;
+        return $this->_configProcessors;
     }
 
     /**
@@ -821,7 +913,8 @@ class Kernel implements KernelInterface
     }
 
     /**
-     * Boots the Kernel
+     * Boots the Kernel. Please note that the configuration and the DIC container are NOT loaded
+     * on this method. They are lazy loaded.
      *
      * @return void
      */
@@ -829,6 +922,32 @@ class Kernel implements KernelInterface
     {
         $this->initializeDirectories();
         $this->initializeEnvironment();
+        $this->initializeConfigTemplateVariables();
+        $this->initializeConfig();
+        $this->initializeContainer();
+    }
+
+    /**
+     * Initializes the template variables used on the config instance.
+     *
+     * @return void
+     */
+    protected function initializeConfigTemplateVariables()
+    {
+        $this->_options['configTemplateVariables'] = array_replace(
+            $this->_options['configTemplateVariables'],
+            [
+                '%kernel.root_path%'          => $this->getRootPath(),
+                '%kernel.vendor_path%'        => $this->getVendorPath(),
+                '%kernel.logs_path%'          => $this->getLogsPath(),
+                '%kernel.etc_path%'           => $this->getEtcPath(),
+                '%kernel.config_path%'        => $this->getConfigPath(),
+                '%kernel.bin_path%'           => $this->getBinPath(),
+                '%kernel.tmp_path%'           => $this->getTmpPath(),
+                '%kernel.cache_path%'         => $this->getCachePath(),
+                '%kernel.var_path%'           => $this->getVarPath()
+            ]
+        );
     }
 
     /**
@@ -841,8 +960,6 @@ class Kernel implements KernelInterface
     protected function initializeContainer($refresh = false)
     {
         if ($this->_container === null || $refresh) {
-            $this->initializeConfig($refresh);
-
             $this->_container = new ContainerBuilder();
             $installedComponents = $this->getInstalledComponents();
 
@@ -853,6 +970,10 @@ class Kernel implements KernelInterface
                     $loader = new XmlFileLoader($this->_container, new FileLocator(dirname($path)));
                     $loader->load('services.xml');
                 }
+            }
+
+            foreach ($this->getOption('templateVariables', []) as $key => $value) {
+                $this->_container->setParameter(substr($key, 1, -1), $value);
             }
 
             $this->_container->compile();

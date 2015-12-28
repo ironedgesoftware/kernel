@@ -40,12 +40,24 @@ interface ProcessorInterface
     );
 
     /**
-     * This method is called after loading and merging all files.
+     * This method is called BEFORE caching the configuration. This method should be used if you need
+     * to validate and / or modify the configuration in any way before we cache the final array.
      *
      * @param Kernel          $kernel - Kernel.
      * @param ConfigInterface $config - Config object.
      *
      * @return void
      */
-    public function onAfterProcess(Kernel $kernel, ConfigInterface $config);
+    public function onBeforeCache(Kernel $kernel, ConfigInterface $config);
+
+    /**
+     * This method is called AFTER caching the configuration. This method should be used
+     * when you need to manually create services / cache instances / etc.
+     *
+     * @param Kernel          $kernel - Kernel.
+     * @param ConfigInterface $config - Config object.
+     *
+     * @return void
+     */
+    public function onAfterCache(Kernel $kernel, ConfigInterface $config);
 }

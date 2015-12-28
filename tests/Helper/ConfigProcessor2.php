@@ -22,7 +22,8 @@ use IronEdge\Component\Kernel\Kernel;
 class ConfigProcessor2 implements ProcessorInterface
 {
     public static $onComponentConfigRegistrationCalled = false;
-    public static $onAfterProcessCalled = false;
+    public static $onBeforeCache = false;
+    public static $onAfterCache = false;
 
     public function onComponentConfigRegistration(
         Kernel $kernel,
@@ -34,8 +35,13 @@ class ConfigProcessor2 implements ProcessorInterface
         self::$onComponentConfigRegistrationCalled = true;
     }
 
-    public function onAfterProcess(Kernel $kernel, ConfigInterface $config)
+    public function onBeforeCache(Kernel $kernel, ConfigInterface $config)
     {
-        self::$onAfterProcessCalled = true;
+        self::$onBeforeCache = true;
+    }
+
+    public function onAfterCache(Kernel $kernel, ConfigInterface $config)
+    {
+        self::$onAfterCache = true;
     }
 }
