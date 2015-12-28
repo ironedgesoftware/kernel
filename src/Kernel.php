@@ -539,7 +539,7 @@ class Kernel implements KernelInterface
     public function initializeConfig($refresh = false)
     {
         if (!$this->_configurationWasInitialized || $refresh) {
-            $cache = $this->getKernelCache();
+            $cache = $this->getKernelCache($refresh);
 
             $this->_config = new Config(
                 [],
@@ -720,13 +720,15 @@ class Kernel implements KernelInterface
     /**
      * Returns the kernel cache provider instance.
      *
+     * @param bool $refresh - Re-create the instance even if it's already created.
+     *
      * @throws \IronEdge\Component\Cache\Exception\InvalidConfigException
      * @throws \IronEdge\Component\Cache\Exception\InvalidTypeException
      * @throws \IronEdge\Component\Cache\Exception\MissingExtensionException
      *
      * @return \Doctrine\Common\Cache\CacheProvider
      */
-    public function getKernelCache()
+    public function getKernelCache($refresh = false)
     {
         return $this->getCacheFactory()->create(
             self::KERNEL_CACHE_INSTANCE_ID,
@@ -735,8 +737,36 @@ class Kernel implements KernelInterface
                 'void',
             [
                 'directory'             => $this->getCachePath().'/ironedge/kernel'
-            ]
+            ],
+            $refresh
         );
+    }
+
+    /**
+     * Clears the cache used by this kernel instance.
+     *
+     * @return $this
+     */
+    public function clearKernelCache()
+    {
+        $this->getKernelCache()->deleteAll();
+
+        return $this;
+    }
+
+    /**
+     * Boots the Kernel. Please note that the configuration and the DIC container are NOT loaded
+     * on this method. They are lazy loaded.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        $this->initializeDirectories();
+        $this->initializeEnvironment();
+        $this->initializeConfigTemplateVariables();
+        $this->initializeConfig(true);
+        $this->initializeContainer();
     }
 
     /**
@@ -910,21 +940,6 @@ class Kernel implements KernelInterface
 
             $this->_config->load(['file' => $file, 'loadInKey' => 'components.'.$componentName, 'processImports' => true]);
         }
-    }
-
-    /**
-     * Boots the Kernel. Please note that the configuration and the DIC container are NOT loaded
-     * on this method. They are lazy loaded.
-     *
-     * @return void
-     */
-    protected function boot()
-    {
-        $this->initializeDirectories();
-        $this->initializeEnvironment();
-        $this->initializeConfigTemplateVariables();
-        $this->initializeConfig();
-        $this->initializeContainer();
     }
 
     /**

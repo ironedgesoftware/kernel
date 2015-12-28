@@ -16,6 +16,7 @@ use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor;
 use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\BadMethodCallException;
+use Symfony\Component\Yaml\Yaml;
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
@@ -57,6 +58,25 @@ class KernelTest extends AbstractTestCase
     public function tearDown()
     {
         $this->cleanUp();
+    }
+
+    public function test_cache_shouldCacheConfigurationIfCacheIsEnabled()
+    {
+        $kernel = $this->createInstance(['environment' => 'prod']);
+
+        $this->assertFalse($kernel->hasComponentConfigParam('fantasy_vendor/fantasy_component_1', 'added_option'));
+
+        $optionalConfigFilePath = $this->getTestRootPath().'/optional.yml';
+
+        file_put_contents($optionalConfigFilePath, Yaml::dump(['added_option' => 'added_value']));
+
+        $kernel->boot();
+
+        $this->assertFalse($kernel->hasComponentConfigParam('fantasy_vendor/fantasy_component_1', 'added_option'));
+
+        $kernel->setOptions(['environment' => 'dev']);
+
+        $this->assertTrue($kernel->hasComponentConfigParam('fantasy_vendor/fantasy_component_1', 'added_option'));
     }
 
     public function test_setContainer_setsANewContainer()
