@@ -531,6 +531,8 @@ class Kernel implements KernelInterface
             $this->loadRootProjectConfigFiles();
 
             $this->runConfigProcessors();
+
+            $this->_configurationWasInitialized = true;
         }
     }
 
