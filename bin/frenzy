@@ -17,13 +17,15 @@ if (php_sapi_name() !== 'cli') {
 }
 
 $autoloaders = [
-    __DIR__.'/../../vendor/autoload.php',
+    __DIR__.'/../../../autoload.php',
     __DIR__.'/../vendor/autoload.php'
 ];
 $autoloader = null;
 
 foreach ($autoloaders as $a) {
     if (is_file($a)) {
+        $autoloader = $a;
+
         break;
     }
 }
