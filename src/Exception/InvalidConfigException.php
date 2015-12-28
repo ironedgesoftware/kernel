@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the frenzy-framework package.
+ * This file is part of the kernel package.
  *
  * (c) Gustavo Falco <comfortablynumb84@gmail.com>
  *

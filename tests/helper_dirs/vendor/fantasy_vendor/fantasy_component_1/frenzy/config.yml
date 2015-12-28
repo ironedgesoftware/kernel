@@ -12,5 +12,4 @@ components:
     registered_param: registered_value_2
 
   ironedge/kernel:
-    config:
-      processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor
+    eventListenerClass: \IronEdge\Component\Kernel\Test\Helper\Listener

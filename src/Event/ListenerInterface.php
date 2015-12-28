@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the frenzy-framework package.
+ * This file is part of the kernel package.
  *
  * (c) Gustavo Falco <comfortablynumb84@gmail.com>
  *
@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace IronEdge\Component\Kernel\Config;
+namespace IronEdge\Component\Kernel\Event;
 
 
 use IronEdge\Component\Config\ConfigInterface;
@@ -18,7 +18,7 @@ use IronEdge\Component\Kernel\Kernel;
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
  */
-interface ProcessorInterface
+interface ListenerInterface
 {
     /**
      * This method is called when a component wants to register some configuration data to other component.

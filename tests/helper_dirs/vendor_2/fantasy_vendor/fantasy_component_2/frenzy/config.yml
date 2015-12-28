@@ -1,4 +1,3 @@
 components:
   ironedge/kernel:
-    config:
-      processorClass: \IronEdge\Component\Kernel\Test\Helper\InvalidConfigProcessor
+    eventListenerClass: \IronEdge\Component\Kernel\Test\Helper\InvalidListener

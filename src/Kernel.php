@@ -13,8 +13,8 @@ namespace IronEdge\Component\Kernel;
 
 use IronEdge\Component\Config\Config;
 use IronEdge\Component\Config\ConfigInterface;
+use IronEdge\Component\Kernel\Event\ListenerInterface;
 use IronEdge\Component\Kernel\Exception\InvalidConfigException;
-use IronEdge\Component\Kernel\Config\ProcessorInterface;
 use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
@@ -705,7 +705,7 @@ class Kernel implements KernelInterface
                     continue;
                 }
 
-                /** @var ProcessorInterface $processor */
+                /** @var ListenerInterface $processor */
                 $processor = $configProcessors[$targetComponentName];
 
                 $processor->onComponentConfigRegistration(
@@ -720,7 +720,7 @@ class Kernel implements KernelInterface
 
         // Now, the onAfterProcess method.
 
-        /** @var ProcessorInterface $processor */
+        /** @var ListenerInterface $processor */
         foreach ($configProcessors as $processor) {
             $processor->onAfterProcess($this, $this->getConfig());
         }
@@ -739,26 +739,26 @@ class Kernel implements KernelInterface
         $componentsNames = $this->getInstalledComponentsNames();
 
         foreach ($componentsNames as $componentName) {
-            if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.config.processorClass')) {
+            if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.eventListenerClass')) {
                 continue;
             }
 
             $processorClass = $this->getComponentConfigParam(
                 $componentName,
-                'components.ironedge/kernel.config.processorClass'
+                'components.ironedge/kernel.eventListenerClass'
             );
 
             if (!is_string($processorClass)) {
                 throw InvalidConfigException::create(
-                    'Configuration "components.ironedge/kernel.processorClass" must be a string.'
+                    'Configuration "components.ironedge/kernel.eventListenerClass" must be a string.'
                 );
             }
 
             $processor = new $processorClass();
 
-            if (!($processor instanceof ProcessorInterface)) {
+            if (!($processor instanceof ListenerInterface)) {
                 throw InvalidConfigException::create(
-                    'Configuration "components.ironedge/kernel.processorClass" must be a class of instance '.
+                    'Configuration "components.ironedge/kernel.eventListenerClass" must be a class of instance '.
                     '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
                 );
             }
