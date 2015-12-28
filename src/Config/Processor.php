@@ -34,15 +34,13 @@ class Processor implements ProcessorInterface
         }
     }
 
-    public function onAfterCache(Kernel $kernel, ConfigInterface $config)
-    {
-        // TODO: Implement onAfterCache() method.
-    }
-
     public function onBeforeCache(Kernel $kernel, ConfigInterface $config)
     {
-        // TODO: Implement onBeforeCache() method.
+
     }
 
+    public function onAfterCache(Kernel $kernel, ConfigInterface $config)
+    {
 
+    }
 }

@@ -11,6 +11,7 @@
 
 namespace IronEdge\Component\Kernel;
 
+use Doctrine\Common\Cache\CacheProvider;
 use IronEdge\Component\Cache\Factory;
 use IronEdge\Component\Config\Config;
 use IronEdge\Component\Config\ConfigInterface;
@@ -20,9 +21,11 @@ use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
+use Symfony\Component\Config\ConfigCache;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 
 /*
@@ -743,15 +746,20 @@ class Kernel implements KernelInterface
     }
 
     /**
-     * Clears the cache used by this kernel instance.
+     * Clears the cache of every cache instance, and the DIC cache.
      *
-     * @return $this
+     * @return void
      */
-    public function clearKernelCache()
+    public function clearCache()
     {
-        $this->getKernelCache()->deleteAll();
+        /** @var CacheProvider $cache */
+        foreach ($this->getCacheFactory()->getInstances() as $cache) {
+            $cache->deleteAll();
+        }
 
-        return $this;
+        // The DIC has its own cache mechanism. We need to clear it too
+
+        @unlink($this->getContainerCacheFilePath());
     }
 
     /**
@@ -766,7 +774,7 @@ class Kernel implements KernelInterface
         $this->initializeEnvironment();
         $this->initializeConfigTemplateVariables();
         $this->initializeConfig(true);
-        $this->initializeContainer();
+        $this->initializeContainer(true);
     }
 
     /**
@@ -975,24 +983,54 @@ class Kernel implements KernelInterface
     protected function initializeContainer($refresh = false)
     {
         if ($this->_container === null || $refresh) {
-            $this->_container = new ContainerBuilder();
-            $installedComponents = $this->getInstalledComponents();
+            $file = $this->getContainerCacheFilePath();
+            $containerClassName = 'IronEdgeKernelContainer_'.sha1($file);
+            $containerConfigCache = new ConfigCache($file, !$this->isCacheEnabled());
 
-            foreach ($installedComponents as $componentName => $componentPath) {
-                $path = $componentPath.'/frenzy/services.xml';
+            if (!$containerConfigCache->isFresh()) {
+                $containerBuilder = new ContainerBuilder();
 
-                if (is_file($path)) {
-                    $loader = new XmlFileLoader($this->_container, new FileLocator(dirname($path)));
-                    $loader->load('services.xml');
+                $installedComponents = $this->getInstalledComponents();
+
+                foreach ($installedComponents as $componentName => $componentPath) {
+                    $path = $componentPath.'/frenzy/services.xml';
+
+                    if (is_file($path)) {
+                        $loader = new XmlFileLoader($containerBuilder, new FileLocator(dirname($path)));
+                        $loader->load('services.xml');
+                    }
                 }
+
+                foreach ($this->getOption('templateVariables', []) as $key => $value) {
+                    $this->_container->setParameter(substr($key, 1, -1), $value);
+                }
+
+                $containerBuilder->compile();
+
+                $dumper = new PhpDumper($containerBuilder);
+
+                $containerConfigCache->write(
+                    $dumper->dump(['class' => $containerClassName]),
+                    $containerBuilder->getResources()
+                );
             }
 
-            foreach ($this->getOption('templateVariables', []) as $key => $value) {
-                $this->_container->setParameter(substr($key, 1, -1), $value);
-            }
+            require_once $file;
 
-            $this->_container->compile();
+            $containerClassName = '\\'.$containerClassName;
+
+            $this->_container = new $containerClassName();
         }
+    }
+
+    /**
+     * Returns the path to the cached DIC instance.
+     *
+     * @return string
+     */
+    protected function getContainerCacheFilePath()
+    {
+        return $this->getCachePath().'/ironedge/kernel/container.php';
     }
 
     /**
