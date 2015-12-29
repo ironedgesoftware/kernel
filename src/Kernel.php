@@ -438,9 +438,7 @@ class Kernel implements KernelInterface
 
             // Add the root component
 
-            if ($this->isVendor()) {
-                $this->_installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
-            }
+            $this->_installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
 
             // Add additional installed components
 
