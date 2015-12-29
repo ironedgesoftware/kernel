@@ -67,6 +67,8 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
 
         if ($this->isVendor()) {
             $installedComponents['ROOT/PACKAGE'] = realpath(__DIR__.'/../../../../../');
+        } else {
+            $installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
         }
 
         ksort($installedComponents);
