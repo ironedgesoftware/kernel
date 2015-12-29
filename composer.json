@@ -20,6 +20,7 @@
 
         "symfony/dependency-injection": "^3.0",
         "symfony/config": "^3.0",
+        "symfony/event-dispatcher": "^3.0",
 
         "ironedge/config": "^1.0",
         "ironedge/cache": "^1.0"

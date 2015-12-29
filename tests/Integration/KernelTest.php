@@ -14,6 +14,8 @@ namespace IronEdge\Component\Kernel\Test\Integration;
 use IronEdge\Component\Kernel\Kernel;
 use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor;
 use IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2;
+use IronEdge\Component\Kernel\Test\Helper\EventListener;
+use IronEdge\Component\Kernel\Test\Helper\EventListener2;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\BadMethodCallException;
 use Symfony\Component\Yaml\Yaml;
@@ -50,14 +52,52 @@ class KernelTest extends AbstractTestCase
         ConfigProcessor::$onComponentConfigRegistrationCalled = false;
         ConfigProcessor::$onBeforeCache = false;
         ConfigProcessor::$onAfterCache = false;
+        ConfigProcessor::$onBeforeContainerCompile = false;
         ConfigProcessor2::$onComponentConfigRegistrationCalled = false;
         ConfigProcessor2::$onBeforeCache = false;
         ConfigProcessor2::$onAfterCache = false;
+        ConfigProcessor2::$onBeforeContainerCompile = false;
+        EventListener::$called = false;
+        EventListener2::$called = false;
     }
 
     public function tearDown()
     {
         $this->cleanUp();
+    }
+
+    public function test_eventListeners_shouldBeRegisteredSuccessfully()
+    {
+        $kernel = new Kernel(
+            [
+                'additionalInstalledComponents'             => [
+                    'fantasy_vendor/fantasy_component_1'                       => $this->getTestVendorPath().'/fantasy_vendor/fantasy_component_1'
+                ]
+            ]
+        );
+
+        $this->assertFalse(EventListener::$called);
+        $this->assertFalse(EventListener2::$called);
+
+        $eventListener = $kernel->getEventDispatcher();
+
+        $eventListener->dispatch('my.event');
+
+        $this->assertTrue(EventListener::$called);
+        $this->assertTrue(EventListener2::$called);
+
+        $listeners = $eventListener->getListeners('my.event');
+
+        if ($listeners[0][0] instanceof EventListener) {
+            $firstListener = $listeners[0][0];
+            $secondListener = $listeners[1][0];
+        } else {
+            $firstListener = $listeners[1][0];
+            $secondListener = $listeners[0][0];
+        }
+
+        $this->assertEquals(0, $eventListener->getListenerPriority('my.event', [$firstListener, 'handle']));
+        $this->assertEquals(2, $eventListener->getListenerPriority('my.event', [$secondListener, 'handle']));
     }
 
     public function test_cache_shouldCacheConfigurationIfCacheIsEnabled()
@@ -201,10 +241,12 @@ class KernelTest extends AbstractTestCase
         $this->assertTrue(ConfigProcessor::$onComponentConfigRegistrationCalled);
         $this->assertTrue(ConfigProcessor::$onBeforeCache);
         $this->assertTrue(ConfigProcessor::$onAfterCache);
+        $this->assertTrue(ConfigProcessor::$onBeforeContainerCompile);
 
         $this->assertFalse(ConfigProcessor2::$onComponentConfigRegistrationCalled);
         $this->assertTrue(ConfigProcessor2::$onBeforeCache);
         $this->assertTrue(ConfigProcessor2::$onAfterCache);
+        $this->assertTrue(ConfigProcessor2::$onBeforeContainerCompile);
 
         $this->assertEquals(
             'registered_value_1',

@@ -31,7 +31,6 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
      */
     private $_isVendor;
 
-
     // Helper Methods
 
     protected function getVendorPath()

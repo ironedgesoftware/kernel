@@ -18,12 +18,14 @@ namespace IronEdge\Component\Kernel\Test\Helper;
 use IronEdge\Component\Config\ConfigInterface;
 use IronEdge\Component\Kernel\Config\ProcessorInterface;
 use IronEdge\Component\Kernel\Kernel;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 class ConfigProcessor2 implements ProcessorInterface
 {
     public static $onComponentConfigRegistrationCalled = false;
     public static $onBeforeCache = false;
     public static $onAfterCache = false;
+    public static $onBeforeContainerCompile = false;
 
     public function onComponentConfigRegistration(
         Kernel $kernel,
@@ -43,5 +45,13 @@ class ConfigProcessor2 implements ProcessorInterface
     public function onAfterCache(Kernel $kernel, ConfigInterface $config)
     {
         self::$onAfterCache = true;
+    }
+
+    public function onBeforeContainerCompile(
+        Kernel $kernel,
+        ConfigInterface $config,
+        ContainerBuilder $containerBuilder
+    ) {
+        self::$onBeforeContainerCompile = true;
     }
 }

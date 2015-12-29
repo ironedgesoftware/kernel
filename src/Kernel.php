@@ -16,6 +16,7 @@ use IronEdge\Component\Cache\Factory;
 use IronEdge\Component\Config\Config;
 use IronEdge\Component\Config\ConfigInterface;
 use IronEdge\Component\Kernel\Config\ProcessorInterface;
+use IronEdge\Component\Kernel\EventDispatcher\EventDispatcher;
 use IronEdge\Component\Kernel\Exception\InvalidConfigException;
 use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
@@ -23,6 +24,7 @@ use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
 use Symfony\Component\Config\ConfigCache;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
@@ -33,8 +35,8 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  */
 class Kernel implements KernelInterface
 {
-    const KERNEL_CACHE_INSTANCE_ID          = 'ironedge.kernel';
-    const KERNEL_CACHE_CONFIG_ID            = 'configuration';
+    const KERNEL_CACHE_INSTANCE_ID = 'ironedge.kernel';
+    const KERNEL_CACHE_CONFIG_ID = 'configuration';
 
 
     /**
@@ -96,7 +98,7 @@ class Kernel implements KernelInterface
     /**
      * Field _container.
      *
-     * @var ContainerInterface
+     * @var Container
      */
     private $_container;
 
@@ -148,8 +150,8 @@ class Kernel implements KernelInterface
     /**
      * Returns a specific environment option, or $default if option $name does not exist.
      *
-     * @param string $name    - Option name.
-     * @param mixed  $default - Default value if option does not exist.
+     * @param string $name - Option name.
+     * @param mixed $default - Default value if option does not exist.
      *
      * @return mixed
      */
@@ -360,7 +362,7 @@ class Kernel implements KernelInterface
     /**
      * Returns the path to a directory.
      *
-     * @param string $name    - Directory name.
+     * @param string $name - Directory name.
      * @param string $default - Default directory path.
      *
      * @return string
@@ -431,6 +433,11 @@ class Kernel implements KernelInterface
                 $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
 
+            $this->_installedComponents = array_replace(
+                $this->_installedComponents,
+                $this->getOption('additionalInstalledComponents', [])
+            );
+
             ksort($this->_installedComponents);
         }
 
@@ -450,9 +457,9 @@ class Kernel implements KernelInterface
     /**
      * Returns a configuration parameter.
      *
-     * @param string $name    - Param name.
-     * @param mixed  $default - Default value in case the param does not exist.
-     * @param array  $options - Options.
+     * @param string $name - Param name.
+     * @param mixed $default - Default value in case the param does not exist.
+     * @param array $options - Options.
      *
      * @return mixed
      */
@@ -464,9 +471,9 @@ class Kernel implements KernelInterface
     /**
      * Sets a configuration parameter.
      *
-     * @param string $name    - Param name.
-     * @param mixed  $value   - Value.
-     * @param array  $options - Options.
+     * @param string $name - Param name.
+     * @param mixed $value - Value.
+     * @param array $options - Options.
      *
      * @return mixed
      */
@@ -478,8 +485,8 @@ class Kernel implements KernelInterface
     /**
      * Checks if a configuration parameter exists.
      *
-     * @param string $name    - Param name.
-     * @param array  $options - Options.
+     * @param string $name - Param name.
+     * @param array $options - Options.
      *
      * @return bool
      */
@@ -492,9 +499,9 @@ class Kernel implements KernelInterface
      * Returns a configuration parameter of a component.
      *
      * @param string $componentName - Component name.
-     * @param string $paramName     - Param name.
-     * @param mixed  $default       - Default value in case the param does not exist.
-     * @param array  $options       - Options.
+     * @param string $paramName - Param name.
+     * @param mixed $default - Default value in case the param does not exist.
+     * @param array $options - Options.
      *
      * @return mixed
      */
@@ -507,9 +514,9 @@ class Kernel implements KernelInterface
      * Sets a configuration parameter of a component.
      *
      * @param string $componentName - Component name.
-     * @param string $paramName     - Param name.
-     * @param mixed  $value         - Value.
-     * @param array  $options       - Options.
+     * @param string $paramName - Param name.
+     * @param mixed $value - Value.
+     * @param array $options - Options.
      *
      * @return mixed
      */
@@ -522,8 +529,8 @@ class Kernel implements KernelInterface
      * Checks if a configuration parameter of a component exists.
      *
      * @param string $componentName - Component name.
-     * @param string $paramName     - Param name.
-     * @param array  $options       - Options.
+     * @param string $paramName - Param name.
+     * @param array $options - Options.
      *
      * @return mixed
      */
@@ -547,7 +554,7 @@ class Kernel implements KernelInterface
             $this->_config = new Config(
                 [],
                 [
-                    'templateVariables'         => $this->getOption('configTemplateVariables', [])
+                    'templateVariables' => $this->getOption('configTemplateVariables', [])
                 ]
             );
 
@@ -582,30 +589,31 @@ class Kernel implements KernelInterface
     {
         $this->_options = array_replace_recursive(
             [
-                'environment'               => 'dev',
-                'environmentsOptions'       => [
-                    'defaults'                  => [
-                        'cache'                     => false
+                'environment'                       => 'dev',
+                'environmentsOptions'               => [
+                    'defaults' => [
+                        'cache' => false
                     ],
-                    'prod'                      => [
-                        'cache'                     => true
+                    'prod'     => [
+                        'cache' => true
                     ],
-                    'staging'                   => [
-                        'cache'                     => true
+                    'staging'  => [
+                        'cache' => true
                     ]
                 ],
-                'directories'               => [
-                    'rootPath'                  => null,
-                    'vendorPath'                => null,
-                    'logsPath'                  => null,
-                    'etcPath'                   => null,
-                    'configPath'                => null,
-                    'binPath'                   => null,
-                    'tmpPath'                   => null,
-                    'cachePath'                 => null,
-                    'varPath'                   => null
+                'additionalInstalledComponents'     => [],
+                'directories'                       => [
+                    'rootPath'   => null,
+                    'vendorPath' => null,
+                    'logsPath'   => null,
+                    'etcPath'    => null,
+                    'configPath' => null,
+                    'binPath'    => null,
+                    'tmpPath'    => null,
+                    'cachePath'  => null,
+                    'varPath'    => null
                 ],
-                'configTemplateVariables'   => []
+                'configTemplateVariables'           => []
             ],
             $options
         );
@@ -628,8 +636,8 @@ class Kernel implements KernelInterface
     /**
      * Returns a specific option, or $default if option $name does not exist.
      *
-     * @param string $name    - Option name.
-     * @param mixed  $default - Default value if option does not exist.
+     * @param string $name - Option name.
+     * @param mixed $default - Default value if option does not exist.
      *
      * @return mixed
      */
@@ -643,7 +651,7 @@ class Kernel implements KernelInterface
     /**
      * Returns the DIC instance.
      *
-     * @return ContainerInterface
+     * @return Container
      */
     public function getContainer()
     {
@@ -653,11 +661,11 @@ class Kernel implements KernelInterface
     /**
      * Sets the DIC.
      *
-     * @param ContainerInterface $container - Container.
+     * @param Container $container - Container.
      *
      * @return $this
      */
-    public function setContainer(ContainerInterface $container)
+    public function setContainer(Container $container)
     {
         $this->_container = $container;
 
@@ -667,7 +675,7 @@ class Kernel implements KernelInterface
     /**
      * Returns a service with ID $id from the DIC.
      *
-     * @param string  $serviceId       - Service ID.
+     * @param string $serviceId - Service ID.
      * @param integer $invalidBehavior - Invalid Behaviour.
      *
      * @return object
@@ -695,7 +703,7 @@ class Kernel implements KernelInterface
      * Sets a service on the DIC.
      *
      * @param string $serviceId - Service ID.
-     * @param object $service   - Service instance.
+     * @param object $service - Service instance.
      *
      * @return $this
      */
@@ -704,6 +712,16 @@ class Kernel implements KernelInterface
         $this->getContainer()->set($serviceId, $service);
 
         return $this;
+    }
+
+    /**
+     * Returns the event dispatcher.
+     *
+     * @return EventDispatcher
+     */
+    public function getEventDispatcher()
+    {
+        return $this->getContainerService('event_dispatcher');
     }
 
     /**
@@ -739,7 +757,7 @@ class Kernel implements KernelInterface
                 'filesystem' :
                 'void',
             [
-                'directory'             => $this->getCachePath().'/ironedge/kernel'
+                'directory' => $this->getCachePath().'/ironedge/kernel'
             ],
             $refresh
         );
@@ -804,6 +822,23 @@ class Kernel implements KernelInterface
         /** @var ProcessorInterface $processor */
         foreach ($this->getConfigProcessors() as $processor) {
             $processor->onAfterCache($this, $this->getConfig());
+        }
+    }
+
+    /**
+     * Runs the method "onBeforeContainerCompile" method of the configuration processors.
+     *
+     * @param ContainerBuilder $containerBuilder - Container Builder.
+     *
+     * @throws InvalidConfigException
+     *
+     * @return void
+     */
+    protected function runOnBeforeContainerCompileMethod(ContainerBuilder $containerBuilder)
+    {
+        /** @var ProcessorInterface $processor */
+        foreach ($this->getConfigProcessors() as $processor) {
+            $processor->onBeforeContainerCompile($this, $this->getConfig(), $containerBuilder);
         }
     }
 
@@ -960,15 +995,15 @@ class Kernel implements KernelInterface
         $this->_options['configTemplateVariables'] = array_replace(
             $this->_options['configTemplateVariables'],
             [
-                '%kernel.root_path%'          => $this->getRootPath(),
-                '%kernel.vendor_path%'        => $this->getVendorPath(),
-                '%kernel.logs_path%'          => $this->getLogsPath(),
-                '%kernel.etc_path%'           => $this->getEtcPath(),
-                '%kernel.config_path%'        => $this->getConfigPath(),
-                '%kernel.bin_path%'           => $this->getBinPath(),
-                '%kernel.tmp_path%'           => $this->getTmpPath(),
-                '%kernel.cache_path%'         => $this->getCachePath(),
-                '%kernel.var_path%'           => $this->getVarPath()
+                '%kernel.root_path%'   => $this->getRootPath(),
+                '%kernel.vendor_path%' => $this->getVendorPath(),
+                '%kernel.logs_path%'   => $this->getLogsPath(),
+                '%kernel.etc_path%'    => $this->getEtcPath(),
+                '%kernel.config_path%' => $this->getConfigPath(),
+                '%kernel.bin_path%'    => $this->getBinPath(),
+                '%kernel.tmp_path%'    => $this->getTmpPath(),
+                '%kernel.cache_path%'  => $this->getCachePath(),
+                '%kernel.var_path%'    => $this->getVarPath()
             ]
         );
     }
@@ -1004,6 +1039,8 @@ class Kernel implements KernelInterface
                 foreach ($this->getOption('templateVariables', []) as $key => $value) {
                     $this->_container->setParameter(substr($key, 1, -1), $value);
                 }
+
+                $this->runOnBeforeContainerCompileMethod($containerBuilder);
 
                 $containerBuilder->compile();
 

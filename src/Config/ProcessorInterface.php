@@ -14,6 +14,7 @@ namespace IronEdge\Component\Kernel\Config;
 
 use IronEdge\Component\Config\ConfigInterface;
 use IronEdge\Component\Kernel\Kernel;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /*
  * @author Gustavo Falco <comfortablynumb84@gmail.com>
@@ -60,4 +61,19 @@ interface ProcessorInterface
      * @return void
      */
     public function onAfterCache(Kernel $kernel, ConfigInterface $config);
+
+    /**
+     * This method is called BEFORE the DIC container is compiled.
+     *
+     * @param Kernel           $kernel           - Kernel.
+     * @param ConfigInterface  $config           - Config object.
+     * @param ContainerBuilder $containerBuilder - Container Builder.
+     *
+     * @return void
+     */
+    public function onBeforeContainerCompile(
+        Kernel $kernel,
+        ConfigInterface $config,
+        ContainerBuilder $containerBuilder
+    );
 }

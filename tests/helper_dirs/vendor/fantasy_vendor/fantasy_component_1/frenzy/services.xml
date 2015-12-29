@@ -7,5 +7,14 @@
         <service id="fantasy_component_1.datetime" class="DateTime">
             <argument>2010-01-01 00:00:00</argument>
         </service>
+
+        <service id="fantasy_component_1.event_listener" class="IronEdge\Component\Kernel\Test\Helper\EventListener">
+            <tag name="kernel.event_listener" event="my.event" method="handle" />
+        </service>
+
+
+        <service id="fantasy_component_1.event_listener2" class="IronEdge\Component\Kernel\Test\Helper\EventListener2">
+            <tag name="kernel.event_listener" event="my.event" method="handle" priority="2" />
+        </service>
     </services>
 </container>
