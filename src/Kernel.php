@@ -1060,8 +1060,8 @@ class Kernel implements KernelInterface
                     }
                 }
 
-                foreach ($this->getOption('templateVariables', []) as $key => $value) {
-                    $this->_container->setParameter(substr($key, 1, -1), $value);
+                foreach ($this->getOption('configTemplateVariables', []) as $key => $value) {
+                    $containerBuilder->setParameter(substr($key, 1, -1), $value);
                 }
 
                 $this->runOnBeforeContainerCompileMethod($containerBuilder);
