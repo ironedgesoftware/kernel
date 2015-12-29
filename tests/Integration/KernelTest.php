@@ -459,42 +459,31 @@ class KernelTest extends AbstractTestCase
 
     public function test_getInstalledComponents_shouldReturnCorrectData()
     {
-        $kernel = $this->createInstance(
-            [
-                'directories'       => [
-                    'rootPath'          => null,
-                    'vendorPath'        => null,
-                    'configPath'        => null
-                ]
-            ]
-        );
-        $installedComponents = $kernel->getInstalledComponents();
-        $expectedInstalledComponents = $this->getInstalledComponents();
+        $kernel = $this->createInstance();
 
-        $this->assertEquals($expectedInstalledComponents, $installedComponents);
+        $this->assertEquals($this->getTestInstalledComponents(), $kernel->getInstalledComponents());
     }
 
     public function test_getInstalledComponentsNames_returnsAnArrayOfInstalledComponentsNames()
     {
-        $kernel = $this->createInstance(
-            [
-                'directories'       => [
-                    'rootPath'          => null,
-                    'vendorPath'        => null,
-                    'configPath'        => null
-                ]
-            ]
-        );
+        $kernel = $this->createInstance();
 
-        $this->assertEquals($this->getInstalledComponentsNames(), $kernel->getInstalledComponentsNames());
+        $this->assertEquals($this->getTestInstalledComponentNames(), $kernel->getInstalledComponentsNames());
     }
 
     // Data Providers
 
+    public function isRootPackageDataProvider()
+    {
+        return [
+            [$this->getTestRootPath(), true],
+            [$this->getTestHelperDirsPath().'/root_package/ironedge/kernel', false]
+        ];
+    }
+
     public function rootPathDataProvider()
     {
         return [
-            [null],
             [$this->getTestRootPath()]
         ];
     }

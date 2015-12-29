@@ -376,14 +376,15 @@ class Kernel implements KernelInterface
     }
 
     /**
-     * Determines if this component is a vendor, or it's a root project.
+     * Determines if this component is a vendor or the root project.
      *
      * @return bool
      */
     public function isVendor()
     {
         if ($this->_isVendor === null) {
-            $this->_isVendor = is_dir(__DIR__.'/../../../ironedge/kernel');
+            $this->_isVendor = is_dir(__DIR__.'/../../../ironedge/kernel')
+                && is_file(__DIR__.'/../../../composer/installed.json');
         }
 
         return $this->_isVendor;
@@ -436,10 +437,6 @@ class Kernel implements KernelInterface
                 $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
 
-            // Add the root component
-
-            $this->_installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
-
             // Add additional installed components
 
             $additionalInstalledComponents = $this->getOption('additionalInstalledComponents', []);
@@ -463,6 +460,10 @@ class Kernel implements KernelInterface
             }
 
             ksort($this->_installedComponents);
+
+            // Add the root component at the end of the array
+
+            $this->_installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
         }
 
         return $this->_installedComponents;

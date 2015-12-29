@@ -53,77 +53,76 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
         return $this->_isVendor;
     }
 
-    protected function getInstalledComponents()
+    protected function getTestInstalledComponentNames()
     {
-        $installedComponents = [];
+        return array_keys($this->getTestInstalledComponents());
+    }
 
-        foreach (glob($this->getVendorPath().'/*/*') as $glob) {
-            if (!is_file($glob.'/composer.json')) {
+    protected function getTestInstalledComponents()
+    {
+        $glob = glob($this->getTestVendorPath().'/*/*');
+        $expectedInstalledComponents = [];
+
+        foreach ($glob as $dir) {
+            if (!is_dir($dir)) {
                 continue;
             }
 
-            $installedComponents[basename(dirname($glob)).'/'.basename($glob)] = realpath($glob);
+            $expectedInstalledComponents[basename(dirname($dir)).'/'.basename($dir)] = realpath($dir);
         }
 
-        if ($this->isVendor()) {
-            $installedComponents['ROOT/PACKAGE'] = realpath(__DIR__.'/../../../../../');
-        } else {
-            $installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
-        }
+        $expectedInstalledComponents['ROOT/PACKAGE'] = $this->getTestRootPath();
 
-        ksort($installedComponents);
-
-        return $installedComponents;
-    }
-
-    protected function getInstalledComponentsNames()
-    {
-        return array_keys($this->getInstalledComponents());
+        return $expectedInstalledComponents;
     }
 
     protected function getTestRootPath()
     {
-        return realpath(__DIR__.'/../helper_dirs/root');
+        return realpath($this->getTestHelperDirsPath().'/root');
     }
 
     protected function getTestVendorPath()
     {
-        return realpath(__DIR__.'/../helper_dirs/vendor');
+        return realpath($this->getTestHelperDirsPath().'/vendor');
     }
 
     protected function getTestVendorPath2()
     {
-        return realpath(__DIR__.'/../helper_dirs/vendor_2');
+        return realpath($this->getTestHelperDirsPath().'/vendor_2');
     }
 
     protected function getTestVendorPath3()
     {
-        return realpath(__DIR__.'/../helper_dirs/vendor_3');
+        return realpath($this->getTestHelperDirsPath().'/vendor_3');
     }
 
     protected function getTestVendorPath4()
     {
-        return realpath(__DIR__.'/../helper_dirs/vendor_4');
+        return realpath($this->getTestHelperDirsPath().'/vendor_4');
     }
 
     protected function getTestVendorPath5()
     {
-        return realpath(__DIR__.'/../helper_dirs/vendor_5');
+        return realpath($this->getTestHelperDirsPath().'/vendor_5');
     }
 
     protected function getTestConfigPath()
     {
-        return realpath(__DIR__.'/../helper_dirs/config');
+        return realpath($this->getTestHelperDirsPath().'/config');
+    }
+
+    protected function getTestHelperDirsPath()
+    {
+        return realpath(__DIR__.'/../helper_dirs');
     }
 
     protected function cleanUp()
     {
-        $glob = glob($this->getTestRootPath().'/*');
-        $glob = $glob + [
-                $this->getRootPath().'/var',
-                $this->getRootPath().'/etc',
-                $this->getRootPath().'/bin'
-            ];
+        $glob = glob($this->getTestRootPath().'/*') + [
+            $this->getRootPath().'/var',
+            $this->getRootPath().'/etc',
+            $this->getRootPath().'/bin'
+        ];
 
         foreach ($glob as $element) {
             $this->removeElement($element);
