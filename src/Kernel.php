@@ -415,6 +415,8 @@ class Kernel implements KernelInterface
      *
      * {"ironedge/kernel" => "/path/to/ironedge/kernel", "myvendor/mycomponent" => "/path/to/myvendor/mycomponent}
      *
+     * @throws InvalidConfigException
+     *
      * @return array
      */
     public function getInstalledComponents()
@@ -433,10 +435,25 @@ class Kernel implements KernelInterface
                 $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
 
-            $this->_installedComponents = array_replace(
-                $this->_installedComponents,
-                $this->getOption('additionalInstalledComponents', [])
-            );
+            $additionalInstalledComponents = $this->getOption('additionalInstalledComponents', []);
+
+            if ($additionalInstalledComponents) {
+                foreach ($additionalInstalledComponents as $componentName => $componentPath) {
+                    if (!is_dir($componentPath)) {
+                        throw InvalidConfigException::create(
+                            'Option "additionalInstalledComponents" as a component "'.$componentName.'" with a path '.
+                            '"'.$componentPath.'" which does not exist.'
+                        );
+                    }
+
+                    $additionalInstalledComponents[$componentName] = realpath($componentPath);
+                }
+
+                $this->_installedComponents = array_replace(
+                    $this->_installedComponents,
+                    $additionalInstalledComponents
+                );
+            }
 
             ksort($this->_installedComponents);
         }
@@ -946,9 +963,10 @@ class Kernel implements KernelInterface
      */
     protected function loadRootProjectConfigFiles()
     {
-        // Finally, we load the root project's config files. We must load them in these specific order.
+        // First file is included in the case this component is used as the root component / package.
 
         $files = [
+            $this->getRootPath().'/frenzy/config.yml',
             $this->getConfigCommonFilePath(),
             $this->getConfigEnvironmentFilePath(),
             $this->getConfigCustomFilePath()
