@@ -21,6 +21,7 @@ use IronEdge\Component\Kernel\Exception\InvalidConfigException;
 use IronEdge\Component\Kernel\Exception\CantCreateDirectoryException;
 use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
+use IronEdge\Component\Kernel\Exception\MissingDirectoryException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
 use Symfony\Component\Config\ConfigCache;
 use Symfony\Component\Config\FileLocator;
@@ -382,7 +383,7 @@ class Kernel implements KernelInterface
     public function isVendor()
     {
         if ($this->_isVendor === null) {
-            $this->_isVendor = !is_dir(__DIR__.'/../vendor');
+            $this->_isVendor = is_dir(__DIR__.'/../../../ironedge/kernel');
         }
 
         return $this->_isVendor;
@@ -434,6 +435,14 @@ class Kernel implements KernelInterface
 
                 $this->_installedComponents[basename(dirname($globElement)).'/'.basename($globElement)] = $globElement;
             }
+
+            // Add the root component
+
+            if ($this->isVendor()) {
+                $this->_installedComponents['ROOT/PACKAGE'] = $this->getRootPath();
+            }
+
+            // Add additional installed components
 
             $additionalInstalledComponents = $this->getOption('additionalInstalledComponents', []);
 
@@ -606,6 +615,7 @@ class Kernel implements KernelInterface
     {
         $this->_options = array_replace_recursive(
             [
+                'createDirectories'                 => true,
                 'environment'                       => 'dev',
                 'environmentsOptions'               => [
                     'defaults' => [
@@ -963,10 +973,7 @@ class Kernel implements KernelInterface
      */
     protected function loadRootProjectConfigFiles()
     {
-        // First file is included in the case this component is used as the root component / package.
-
         $files = [
-            $this->getRootPath().'/frenzy/config.yml',
             $this->getConfigCommonFilePath(),
             $this->getConfigEnvironmentFilePath(),
             $this->getConfigCustomFilePath()
@@ -1112,6 +1119,7 @@ class Kernel implements KernelInterface
      * @throws CantCreateDirectoryException
      * @throws DirectoryIsNotWritable
      * @throws InvalidOptionTypeException
+     * @throws MissingDirectoryException
      *
      * @return void
      */
@@ -1138,8 +1146,14 @@ class Kernel implements KernelInterface
                 }
             }
 
-            if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
-                throw CantCreateDirectoryException::create($name, $dir);
+            if (!is_dir($dir)) {
+                if (!$this->getOption('createDirectories')) {
+                    throw MissingDirectoryException::create($name, $dir);
+                }
+
+                if (!@mkdir($dir, 0777, true)) {
+                    throw CantCreateDirectoryException::create($name, $dir);
+                }
             }
 
             switch ($name) {

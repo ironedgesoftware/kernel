@@ -47,7 +47,7 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
     protected function isVendor()
     {
         if ($this->_isVendor === null) {
-            $this->_isVendor = !is_dir(__DIR__.'/../../vendor');
+            $this->_isVendor = is_dir(__DIR__.'/../../../../ironedge/kernel');
         }
 
         return $this->_isVendor;
@@ -63,6 +63,10 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
             }
 
             $installedComponents[basename(dirname($glob)).'/'.basename($glob)] = realpath($glob);
+        }
+
+        if ($this->isVendor()) {
+            $installedComponents['ROOT/PACKAGE'] = realpath(__DIR__.'/../../../../../');
         }
 
         ksort($installedComponents);
@@ -113,10 +117,30 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
     protected function cleanUp()
     {
         $glob = glob($this->getTestRootPath().'/*');
+        $glob = $glob + [
+                $this->getRootPath().'/var',
+                $this->getRootPath().'/etc',
+                $this->getRootPath().'/bin'
+            ];
 
         foreach ($glob as $element) {
             $this->removeElement($element);
         }
+    }
+
+    protected function getRootPath()
+    {
+        $path = realpath(__DIR__.'/../../');
+
+        // Just want to play safe here...
+
+        if (!$path) {
+            throw new \RuntimeException(
+                'Method "getRootPath" couldn\'t determine the path to the root of this component.'
+            );
+        }
+
+        return $path;
     }
 
     protected function removeElement($element)
@@ -130,11 +154,25 @@ abstract class AbstractTestCase extends \PHPUnit_Framework_TestCase
                     continue;
                 }
 
+                if (strpos($el->getPathname(), $this->getRootPath()) !== 0) {
+                    throw new \RuntimeException(
+                        'Can\'t remove file / dir "'.$el->getPathname().'"! We can only remove files / dirs '.
+                        'inside directory "'.$this->getRootPath().'".'
+                    );
+                }
+
                 $this->removeElement($el->getPathname());
             }
 
             @rmdir($element);
-        } else {
+        } else if (file_exists($element)) {
+            if (strpos($element, $this->getRootPath()) !== 0) {
+                throw new \RuntimeException(
+                    'Can\'t remove file / dir "'.$element.'"! We can only remove files / dirs '.
+                    'inside directory "'.$this->getRootPath().'".'
+                );
+            }
+
             @unlink($element);
         }
     }
