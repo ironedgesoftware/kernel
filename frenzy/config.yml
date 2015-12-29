@@ -2,3 +2,9 @@ components:
   ironedge/kernel:
     config:
       processorClass:         \IronEdge\Component\Kernel\Config\Processor
+    loggers:
+      kernel:
+        level:                DEBUG
+        handlers:
+          type:                 stream
+          path:                 %kernel.logs_path%/kernel.log
