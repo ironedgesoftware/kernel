@@ -1,4 +1,5 @@
 components:
   ironedge/kernel:
     config:
-      processorClass: \IronEdge\Component\Kernel\Test\Helper\InvalidProcessor
+      processor:
+        class: \IronEdge\Component\Kernel\Test\Helper\InvalidProcessor

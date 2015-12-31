@@ -69,11 +69,18 @@ class Kernel implements KernelInterface
     private $_config;
 
     /**
-     * Array of config processors.
+     * Array of config processors, using the component name which registered the processor as the key.
      *
      * @var array
      */
-    private $_configProcessors;
+    private $_configProcessorsByComponent;
+
+    /**
+     * Array of config processors, ordered by priority.
+     *
+     * @var array
+     */
+    private $_configProcessorsByPriority;
 
     /**
      * Kernel Options.
@@ -822,6 +829,30 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Returns an array of registered config processors.
+     *
+     * @return array
+     */
+    public function getConfigProcessors()
+    {
+        $this->initializeConfigProcessors();
+
+        return $this->_configProcessorsByComponent;
+    }
+
+    /**
+     * Returns an array of registered config processors, ordered by priority.
+     *
+     * @return array
+     */
+    public function getConfigProcessorsOrderedByPriority()
+    {
+        $this->initializeConfigProcessors();
+
+        return $this->_configProcessorsByPriority;
+    }
+
+    /**
      * Runs the method "onBeforeCache" method of the configuration processors.
      *
      * @throws InvalidConfigException
@@ -831,7 +862,7 @@ class Kernel implements KernelInterface
     protected function runOnBeforeCacheMethod()
     {
         /** @var ProcessorInterface $processor */
-        foreach ($this->getConfigProcessors() as $processor) {
+        foreach ($this->getConfigProcessorsOrderedByPriority() as $processor) {
             $processor->onBeforeCache($this, $this->getConfig());
         }
     }
@@ -846,7 +877,7 @@ class Kernel implements KernelInterface
     protected function runOnAfterCacheMethod()
     {
         /** @var ProcessorInterface $processor */
-        foreach ($this->getConfigProcessors() as $processor) {
+        foreach ($this->getConfigProcessorsOrderedByPriority() as $processor) {
             $processor->onAfterCache($this, $this->getConfig());
         }
     }
@@ -863,7 +894,7 @@ class Kernel implements KernelInterface
     protected function runOnBeforeContainerCompileMethod(ContainerBuilder $containerBuilder)
     {
         /** @var ProcessorInterface $processor */
-        foreach ($this->getConfigProcessors() as $processor) {
+        foreach ($this->getConfigProcessorsOrderedByPriority() as $processor) {
             $processor->onBeforeContainerCompile($this, $this->getConfig(), $containerBuilder);
         }
     }
@@ -918,54 +949,6 @@ class Kernel implements KernelInterface
     }
 
     /**
-     * Returns an array of registered config processors.
-     *
-     * @throws InvalidConfigException
-     *
-     * @return array
-     */
-    protected function getConfigProcessors()
-    {
-        if ($this->_configProcessors === null) {
-            $this->_configProcessors = [];
-            $componentsNames = $this->getInstalledComponentsNames();
-
-            foreach ($componentsNames as $componentName) {
-                if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.config.processorClass')) {
-                    continue;
-                }
-
-                $processorClass = $this->getComponentConfigParam(
-                    $componentName,
-                    'components.ironedge/kernel.config.processorClass'
-                );
-
-                if (!is_string($processorClass)) {
-                    throw InvalidConfigException::create(
-                        'Error in configuration of component "'.$componentName.'": '.
-                        'Configuration "components.ironedge/kernel.config.processorClass" must be a string. Received: '.
-                        print_r($processorClass, true)
-                    );
-                }
-
-                $processor = new $processorClass();
-
-                if (!($processor instanceof ProcessorInterface)) {
-                    throw InvalidConfigException::create(
-                        'Error in configuration of component "'.$componentName.'": '.
-                        'Configuration "components.ironedge/kernel.config.processorClass" must be a class of instance '.
-                        '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
-                    );
-                }
-
-                $this->_configProcessors[$componentName] = $processor;
-            }
-        }
-
-        return $this->_configProcessors;
-    }
-
-    /**
      * Loads configuration files from the root project.
      *
      * @return void
@@ -1006,6 +989,76 @@ class Kernel implements KernelInterface
             }
 
             $this->_config->load(['file' => $file, 'loadInKey' => 'components.'.$componentName, 'processImports' => true]);
+        }
+    }
+
+    /**
+     * Initializes config processors.
+     *
+     * @throws InvalidConfigException
+     *
+     * @return void
+     */
+    protected function initializeConfigProcessors()
+    {
+        if ($this->_configProcessorsByComponent === null) {
+            $this->_configProcessorsByComponent = [];
+            $this->_configProcessorsByPriority = [];
+            $processorsOrderedByPriority = [];
+            $componentsNames = $this->getInstalledComponentsNames();
+
+            foreach ($componentsNames as $componentName) {
+                if (!$this->hasComponentConfigParam($componentName, 'components.ironedge/kernel.config.processor.class')) {
+                    continue;
+                }
+
+                $processorClass = $this->getComponentConfigParam(
+                    $componentName,
+                    'components.ironedge/kernel.config.processor.class'
+                );
+
+                if (!is_string($processorClass)) {
+                    throw InvalidConfigException::create(
+                        'Error in configuration of component "'.$componentName.'": '.
+                        'Configuration "components.ironedge/kernel.config.processor.class" must be a string. Received: '.
+                        print_r($processorClass, true)
+                    );
+                }
+
+                $processor = new $processorClass();
+
+                if (!($processor instanceof ProcessorInterface)) {
+                    throw InvalidConfigException::create(
+                        'Error in configuration of component "'.$componentName.'": '.
+                        'Configuration "components.ironedge/kernel.config.processor.class" must be a class of instance '.
+                        '"IronEdge\Component\Kernel\Config\ProcessorInterface".'
+                    );
+                }
+
+                $processorPriority = (int) $this->getComponentConfigParam(
+                    $componentName,
+                    'components.ironedge/kernel.config.processor.priority',
+                    0
+                );
+
+                if (!isset($processorsOrderedByPriority[$processorPriority])) {
+                    $processorsOrderedByPriority[$processorPriority] = [];
+                }
+
+                $processorsOrderedByPriority[$processorPriority][] = $processor;
+                $this->_configProcessorsByComponent[$componentName] = $processor;
+            }
+
+            // Order by priority. The greater the number, the higher is the priority.
+
+            krsort($processorsOrderedByPriority, SORT_NUMERIC);
+
+            foreach ($processorsOrderedByPriority as $priority => $processors) {
+                $this->_configProcessorsByPriority = array_merge(
+                    $this->_configProcessorsByPriority,
+                    $processors
+                );
+            }
         }
     }
 

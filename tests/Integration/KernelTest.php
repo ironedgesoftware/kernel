@@ -287,6 +287,11 @@ class KernelTest extends AbstractTestCase
                 'on_after_cache.source_component'
             )
         );
+
+        $orderedByPriority = $kernel->getConfigProcessorsOrderedByPriority();
+
+        $this->assertInstanceOf('\IronEdge\Component\Kernel\Test\Helper\ConfigProcessor2', $orderedByPriority[0]);
+        $this->assertInstanceOf('\IronEdge\Component\Kernel\Test\Helper\ConfigProcessor', $orderedByPriority[1]);
     }
 
     public function test_getComponentConfigParam_returnsAComponentConfigParam()

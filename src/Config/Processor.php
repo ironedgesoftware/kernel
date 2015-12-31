@@ -90,7 +90,7 @@ class Processor implements ProcessorInterface
                 );
             }
         }
+
+        // Create loggers
     }
-
-
 }

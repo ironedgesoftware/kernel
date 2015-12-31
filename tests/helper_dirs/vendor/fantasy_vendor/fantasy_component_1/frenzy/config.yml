@@ -15,4 +15,6 @@ components:
 
   ironedge/kernel:
     config:
-      processorClass: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor
+      processor:
+        class: \IronEdge\Component\Kernel\Test\Helper\ConfigProcessor
+        priority: 1

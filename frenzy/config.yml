@@ -1,7 +1,9 @@
 components:
   ironedge/kernel:
     config:
-      processorClass:         \IronEdge\Component\Kernel\Config\Processor
+      processor:
+        class:                \IronEdge\Component\Kernel\Config\Processor
+        priority:             -10
     loggers:
       kernel:
         level:                DEBUG
