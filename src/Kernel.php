@@ -808,9 +808,13 @@ class Kernel implements KernelInterface
             $cache->deleteAll();
         }
 
+        $this->log('info', 'Cleared all Cache Instances.');
+
         // The DIC has its own cache mechanism. We need to clear it too
 
         @unlink($this->getContainerCacheFilePath());
+
+        $this->log('info', 'Cleared Container Cache.');
     }
 
     /**
@@ -996,7 +1000,7 @@ class Kernel implements KernelInterface
     protected function log($level = 'info', $msg, array $context = [])
     {
         if ($this->hasLogger()) {
-            $this->getLogger()->$level($msg, $context);
+            $this->getLogger()->$level('[Kernel] '.$msg, $context);
         }
 
         return $this;
