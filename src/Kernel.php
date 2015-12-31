@@ -23,7 +23,7 @@ use IronEdge\Component\Kernel\Exception\DirectoryIsNotWritable;
 use IronEdge\Component\Kernel\Exception\InvalidOptionTypeException;
 use IronEdge\Component\Kernel\Exception\MissingDirectoryException;
 use IronEdge\Component\Kernel\Exception\VendorsNotInstalledException;
-use Symfony\Component\Config\ConfigCache;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -814,6 +814,40 @@ class Kernel implements KernelInterface
     }
 
     /**
+     * Returns the logger factory.
+     *
+     * @return \IronEdge\Component\Logger\Factory
+     */
+    public function getLoggerFactory()
+    {
+        return $this->getContainerService('logger.factory');
+    }
+
+    /**
+     * Returns a specific logger instance. If no name is provided, we return the "default" logger.
+     *
+     * @param string $name - Name.
+     *
+     * @return LoggerInterface
+     */
+    public function getLogger($name = 'default')
+    {
+        return $this->getContainerService('logger.'.$name);
+    }
+
+    /**
+     * Returns true if a logger is registered.
+     *
+     * @param string $name - Name.
+     *
+     * @return bool
+     */
+    public function hasLogger($name = 'default')
+    {
+        return $this->hasContainerService('logger.'.$name);
+    }
+
+    /**
      * Boots the Kernel. Please note that the configuration and the DIC container are NOT loaded
      * on this method. They are lazy loaded.
      *
@@ -826,6 +860,8 @@ class Kernel implements KernelInterface
         $this->initializeConfigTemplateVariables();
         $this->initializeConfig(true);
         $this->initializeContainer(true);
+
+        $this->log('info', 'Kernel has booted.', ['env' => $this->getEnvironment()]);
     }
 
     /**
@@ -946,6 +982,24 @@ class Kernel implements KernelInterface
                 );
             }
         }
+    }
+
+    /**
+     * Logs a message.
+     *
+     * @param string $level   - Level.
+     * @param string $msg     - Message.
+     * @param array  $context - Context.
+     *
+     * @return $this
+     */
+    protected function log($level = 'info', $msg, array $context = [])
+    {
+        if ($this->hasLogger()) {
+            $this->getLogger()->$level($msg, $context);
+        }
+
+        return $this;
     }
 
     /**
@@ -1097,11 +1151,9 @@ class Kernel implements KernelInterface
         if ($this->_container === null || $refresh) {
             $file = $this->getContainerCacheFilePath();
             $containerClassName = 'IronEdgeKernelContainer_'.sha1($file);
-            $containerConfigCache = new ConfigCache($file, !$this->isCacheEnabled());
 
-            if (!$containerConfigCache->isFresh()) {
+            if (!$this->isCacheEnabled() || !is_file($file)) {
                 $containerBuilder = new ContainerBuilder();
-
                 $installedComponents = $this->getInstalledComponents();
 
                 foreach ($installedComponents as $componentName => $componentPath) {
@@ -1122,11 +1174,15 @@ class Kernel implements KernelInterface
                 $containerBuilder->compile();
 
                 $dumper = new PhpDumper($containerBuilder);
+                $dir = dirname($file);
 
-                $containerConfigCache->write(
-                    $dumper->dump(['class' => $containerClassName]),
-                    $containerBuilder->getResources()
-                );
+                if (!is_dir($dir) && !mkdir($dir, 0777, true)) {
+                    throw new \RuntimeException('Couldn\'t create directory "'.$dir.'" to dump the DIC.');
+                }
+
+                if (!file_put_contents($file, $dumper->dump(['class' => $containerClassName]))) {
+                    throw new \RuntimeException('Couldn\'t dump container in file "'.$file.'".');
+                }
             }
 
             require_once $file;

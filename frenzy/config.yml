@@ -3,10 +3,21 @@ components:
     config:
       processor:
         class:                \IronEdge\Component\Kernel\Config\Processor
-        priority:             -10
-    loggers:
-      kernel:
-        level:                DEBUG
-        handlers:
+        priority:             99
+    logger:
+      instances:
+        default:
+          handlers:
+            - default
+      handlers:
+        default:
           type:                 stream
-          path:                 %kernel.logs_path%/kernel.log
+          level:                DEBUG
+          stream:               %kernel.logs_path%/default.log
+      formatters:
+        line:
+          serviceId:            logger.formatter.custom_line_formatter
+  ironedge/cli:
+    commands:
+      cache_clear:
+        class: \IronEdge\Component\Kernel\Console\Command\CacheClear

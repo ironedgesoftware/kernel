@@ -5,5 +5,11 @@
 
     <services>
         <service id="event_dispatcher" class="IronEdge\Component\Kernel\EventDispatcher\EventDispatcher" />
+
+        <service id="cache.factory" class="IronEdge\Component\Cache\Factory" />
+
+        <service id="logger.factory" class="IronEdge\Component\Logger\Factory" />
+
+        <service id="logger.formatter.custom_line_formatter" class="IronEdge\Component\Kernel\Logger\Formatter\CustomLineFormatter" />
     </services>
 </container>
