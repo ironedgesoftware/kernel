@@ -1,3 +1,3 @@
 # Kernel
 
-[![Build Status](https://travis-ci.org/ironedgesoftware/file-utils.svg?branch=master)](https://travis-ci.org/ironedgesoftware/kernel)
+[![Build Status](https://travis-ci.org/ironedgesoftware/kernel.svg?branch=master)](https://travis-ci.org/ironedgesoftware/kernel)
