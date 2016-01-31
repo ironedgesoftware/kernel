@@ -1194,6 +1194,9 @@ class Kernel implements KernelInterface
             $containerClassName = '\\'.$containerClassName;
 
             $this->_container = new $containerClassName();
+
+            $this->_container->set('kernel', $this);
+            $this->_container->set('config', $this->getConfig());
         }
     }
 
