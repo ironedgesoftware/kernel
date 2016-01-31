@@ -4,6 +4,10 @@
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="kernel" synthetic="true" />
+
+        <service id="config" synthetic="true" />
+
         <service id="event_dispatcher" class="IronEdge\Component\Kernel\EventDispatcher\EventDispatcher" />
 
         <service id="cache.factory" class="IronEdge\Component\Cache\Factory" />
